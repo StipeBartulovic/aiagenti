@@ -499,8 +499,8 @@ export default function PanelChat({
                           m.research.used ? 'text-emerald-300' : 'text-amber-300'
                         }`}>
                           {m.research.used
-                            ? language === 'en' ? 'Tavily web research used' : 'Tavily web istraživanje korišteno'
-                            : language === 'en' ? 'Web research attempted' : 'Web istraživanje pokušano'}
+                            ? m.research.toolLabel || (language === 'en' ? 'External tool used' : 'Vanjski alat korišten')
+                            : language === 'en' ? 'External tool attempted' : 'Pokušaj vanjskog alata'}
                         </p>
                         {m.research.query && (
                           <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">

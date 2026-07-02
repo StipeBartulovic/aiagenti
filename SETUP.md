@@ -13,6 +13,7 @@ environment variables.
 | --- | --- | --- |
 | DeepSeek | Runs the AI analysis, advisors, summaries, and reports. | Yes |
 | Tavily | Gives the app web research/search for market research tools. | Optional, but research features need it |
+| GitHub API | Lets the CTO advisor search open-source repositories for build-vs-buy checks. | Optional |
 | Upstash Redis | Stores desktop token balances for the hosted desktop bridge. | Needed for production desktop billing simulation |
 | Vercel | Hosts the web app and API routes. | Needed for public web deployment |
 | Tauri | Packages the web app into a Windows/Mac desktop app. | Needed only for desktop builds |
@@ -71,7 +72,27 @@ TAVILY_API_KEY=your_tavily_key_here
 If Tavily is missing, normal validation can still work, but research/search
 features will show a configuration error.
 
-## 4. Get Upstash Redis Values
+## 4. Optional: Add A GitHub Token
+
+The CTO advisor can search public GitHub repositories even without a token. A
+token only helps avoid GitHub rate limits when you test a lot.
+
+1. Open `https://github.com/settings/tokens`.
+2. Create a fine-grained or classic token with public repository read access.
+3. Put it in `.env.local`:
+
+```txt
+GITHUB_TOKEN=your_github_token_here
+```
+
+This powers questions like:
+
+```txt
+Can I build this from an existing open-source project?
+Find GitHub repos for appointment booking SaaS.
+```
+
+## 5. Get Upstash Redis Values
 
 Upstash stores the desktop token wallet ledger when the desktop app talks to the
 hosted backend. For the web-only version, this is less important. For desktop
@@ -90,7 +111,7 @@ UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token_here
 
 In Vercel, paste values without quotes.
 
-## 5. Create The Desktop Shared Secret
+## 6. Create The Desktop Shared Secret
 
 This is a private password between the desktop app and your hosted API. It does
 not come from another service.
@@ -107,7 +128,7 @@ Use the same value for both:
 - `DESKTOP_AI_SHARED_SECRET` on the hosted/Vercel backend
 - `AI_VALIDATOR_DESKTOP_API_KEY` in the desktop build environment
 
-## 6. Run Locally
+## 7. Run Locally
 
 Start the web app:
 
@@ -135,6 +156,7 @@ Good result:
   "checks": {
     "deepseek": true,
     "tavily": true,
+    "githubToken": false,
     "upstashUrl": true,
     "upstashToken": true,
     "desktopSharedSecret": true
@@ -143,8 +165,9 @@ Good result:
 ```
 
 `ok` mainly means DeepSeek is configured, because that is the core AI engine.
+`githubToken` can be false; GitHub search still works with lower public limits.
 
-## 7. Deploy To Vercel
+## 8. Deploy To Vercel
 
 1. Push the project to GitHub.
 2. Import the GitHub repo in Vercel.
@@ -154,6 +177,7 @@ Good result:
 ```txt
 DEEPSEEK_API_KEY
 TAVILY_API_KEY
+GITHUB_TOKEN
 UPSTASH_REDIS_REST_URL
 UPSTASH_REDIS_REST_TOKEN
 DESKTOP_AI_SHARED_SECRET
@@ -169,7 +193,39 @@ Then open:
 https://your-vercel-domain.vercel.app/api/health
 ```
 
-## 8. How Local-First Storage Works
+## 9. How Agent Tools Work
+
+Advisor tools are the app's function-calling layer.
+
+The flow is:
+
+1. User asks a question in the advisor panel.
+2. The advisor decides whether live data is needed.
+3. The app asks the AI for a small JSON tool plan.
+4. The app executes the selected tool.
+5. Tool results go back to the AI.
+6. The final answer cites sources and explains what was found.
+
+Current tools:
+
+```txt
+web_search          -> Tavily live web research
+github_repo_search  -> GitHub repository search for the CTO
+```
+
+Examples:
+
+```txt
+Ivana, provjeri ima li rizika oko imena NaturaFresh.
+Lana, istrazi konkurenciju i SEO potraznju za ovu ideju.
+Marko, nadi open-source projekt koji mogu forkati umjesto da gradim od nule.
+```
+
+Future tools can be added for trademark APIs, SEO volume APIs, Product Hunt,
+Crunchbase, domain checks, or finance calculations. The current setup keeps the
+same architecture but starts with affordable, practical integrations.
+
+## 10. How Local-First Storage Works
 
 The app is designed so project data stays on the user's device.
 
@@ -186,7 +242,7 @@ In the Tauri desktop version:
 - the default workspace path is documented in `TAURI_MIGRATION.md`
 - users can keep their business plans on their own SSD
 
-## 9. Desktop Build
+## 11. Desktop Build
 
 Desktop builds require Rust and Tauri.
 
@@ -203,7 +259,7 @@ For more details, read:
 TAURI_MIGRATION.md
 ```
 
-## 10. Common Problems
+## 12. Common Problems
 
 ### "AI engine is not configured"
 
@@ -213,6 +269,11 @@ to Vercel Environment Variables in production. Restart/redeploy after changing i
 ### "Research search is not configured"
 
 `TAVILY_API_KEY` is missing. Add it only if you want web research features.
+
+### "GitHub repository search is rate limited"
+
+Public GitHub search is being rate limited. Add `GITHUB_TOKEN` or try again
+later.
 
 ### "AI provider rejected the API key"
 
@@ -228,7 +289,7 @@ wallet to instantly add test tokens. No real payment process is connected yet.
 
 Redeploy after changing environment variables.
 
-## 11. Secret Safety
+## 13. Secret Safety
 
 Never commit `.env.local`.
 
@@ -237,6 +298,7 @@ These values are secrets:
 ```txt
 DEEPSEEK_API_KEY
 TAVILY_API_KEY
+GITHUB_TOKEN
 UPSTASH_REDIS_REST_TOKEN
 DESKTOP_AI_SHARED_SECRET
 AI_VALIDATOR_DESKTOP_API_KEY

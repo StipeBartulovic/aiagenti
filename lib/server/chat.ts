@@ -2,6 +2,13 @@ import { AGENTS } from '@/lib/agents';
 import { callDeepSeek, type DeepSeekMessage } from '@/lib/deepseek';
 import { formatResearchForLLM, tavilySearch } from '@/lib/tavily';
 import type { AgentId, ResearchSource } from '@/lib/types';
+import {
+  executeAdvisorTool,
+  formatToolResultsForPrompt,
+  planAdvisorToolCalls,
+  shouldConsiderAdvisorTools,
+  type AdvisorToolResult,
+} from './advisor-tools';
 import { ServerActionError } from './errors';
 
 interface TranscriptMsg {
@@ -25,6 +32,8 @@ interface ResearchStatus {
   used: boolean;
   query?: string;
   error?: string;
+  tool?: string;
+  toolLabel?: string;
 }
 
 export interface ChatResponse {
@@ -164,12 +173,14 @@ ${deepMode ? `DEEP ANSWER MODE IS ON:
   const groundedTokenBudget = deepMode ? 1700 : 900;
   const baseMessages = collapse(messages);
   const forcedQuery = explicitResearchQuery(lastFounderMessage(body.transcript || []), body.context);
+  const founderMessage = lastFounderMessage(body.transcript || []);
   let reply = '';
   let sources: ResearchSource[] | undefined;
   let research: ResearchStatus | undefined;
+  let toolResults: AdvisorToolResult[] = [];
 
   if (forcedQuery) {
-    research = { attempted: true, used: false, query: forcedQuery };
+    research = { attempted: true, used: false, query: forcedQuery, tool: 'web_search', toolLabel: 'Live web search' };
     try {
       console.info('[web-research] forced Tavily search', { agent: body.targetAgentId, query: forcedQuery });
       const found = await tavilySearch(forcedQuery, { maxResults: 6, depth: 'basic' });
@@ -197,12 +208,62 @@ ${deepMode ? `DEEP ANSWER MODE IS ON:
     }
   }
 
+  if (!reply && body.intent !== 'open' && shouldConsiderAdvisorTools(body.targetAgentId, founderMessage, deepMode)) {
+    research = { attempted: true, used: false };
+    try {
+      const calls = await planAdvisorToolCalls({
+        agentId: body.targetAgentId,
+        language: body.language,
+        userMessage: founderMessage,
+        context: body.context,
+      });
+      toolResults = [];
+      for (const call of calls) {
+        try {
+          const result = await executeAdvisorTool(call);
+          toolResults.push(result);
+        } catch (toolError) {
+          console.error('[advisor-tool] failed', { agent: body.targetAgentId, tool: call.tool, error: toolError });
+          research.error = toolError instanceof Error ? toolError.message : 'Tool failed';
+        }
+      }
+
+      const usableResults = toolResults.filter((result) => result.sources.length > 0 || result.summary);
+      if (usableResults.length) {
+        sources = usableResults.flatMap((result) => result.sources).slice(0, 8);
+        research = {
+          attempted: true,
+          used: true,
+          query: usableResults.map((result) => `${result.label}: ${result.query}`).join(' | ').slice(0, 300),
+          tool: usableResults.map((result) => result.tool).join(', '),
+          toolLabel: usableResults.map((result) => result.label).join(' + '),
+        };
+
+        const groundingMessages: DeepSeekMessage[] = [
+          ...baseMessages,
+          {
+            role: 'user',
+            content: `Before answering, the app executed these structured tool calls:\n\n${formatToolResultsForPrompt(usableResults)}\n\nNow answer the founder as ${agent.name}, grounded in these tool results. Use only what the tools actually returned for factual claims. Reference sources inline like [1], [2] when using external facts. If a result is only a preliminary signal (domain/trademark/search demand/open-source fit), say so. Reply in ${langName}.`,
+          },
+        ];
+        reply = await callDeepSeek(collapse(groundingMessages), { temperature, maxTokens: groundedTokenBudget });
+      }
+    } catch (e) {
+      console.error('[advisor-tool] planning failed', e);
+      research = {
+        attempted: true,
+        used: false,
+        error: e instanceof Error ? e.message : 'Tool planning failed',
+      };
+    }
+  }
+
   if (!reply) {
     reply = await callDeepSeek(baseMessages, { temperature, maxTokens: answerTokenBudget });
     const researchMatch = reply.match(/RESEARCH_NEEDED:\s*(.+)/i);
     if (researchMatch) {
       const query = researchMatch[1].trim().replace(/^["']|["']$/g, '').slice(0, 300);
-      research = { attempted: true, used: false, query };
+      research = { attempted: true, used: false, query, tool: 'web_search', toolLabel: 'Live web search' };
       try {
         console.info('[web-research] agent requested Tavily search', { agent: body.targetAgentId, query });
         const found = await tavilySearch(query, { maxResults: 6, depth: 'basic' });

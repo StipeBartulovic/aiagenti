@@ -488,6 +488,8 @@ export interface ChatMessage {
     used: boolean;
     query?: string;
     error?: string;
+    tool?: string;
+    toolLabel?: string;
   };
   /** skuplji/dublji odgovor savjetnika */
   response_mode?: 'fast' | 'deep';
