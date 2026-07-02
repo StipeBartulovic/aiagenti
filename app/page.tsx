@@ -34,8 +34,12 @@ export default function Home() {
     const normalized = msg.toLowerCase();
     if (normalized.includes('deepseek_api_key')) {
       setError(language === 'en'
-        ? 'AI engine is not configured yet. Add DEEPSEEK_API_KEY in .env.local and restart the app.'
-        : 'AI engine još nije konfiguriran. Dodaj DEEPSEEK_API_KEY u .env.local i restartaj aplikaciju.');
+        ? 'AI engine is not configured yet. Add DEEPSEEK_API_KEY to environment variables and redeploy/restart the app.'
+        : 'AI engine još nije konfiguriran. Dodaj DEEPSEEK_API_KEY u environment variables i napravi redeploy/restart aplikacije.');
+    } else if (normalized.includes('tavily_api_key')) {
+      setError(language === 'en'
+        ? 'Research search is not configured yet. Add TAVILY_API_KEY to environment variables and redeploy/restart the app.'
+        : 'Research pretraga još nije konfigurirana. Dodaj TAVILY_API_KEY u environment variables i napravi redeploy/restart aplikacije.');
     } else if (normalized.includes('timeout') || normalized.includes('timed out')) {
       setError(language === 'en'
         ? 'The analysis took too long. Try again with a shorter description or fewer selected audiences.'

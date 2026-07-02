@@ -61,10 +61,32 @@ const endpointCommands: Record<ApiEndpoint, AiCommand> = {
 };
 
 export class AiClientError extends Error {
-  constructor(message: string, public status?: number, public data?: unknown) {
+  constructor(message: string, public status?: number, public data?: unknown, public code?: string) {
     super(message);
     this.name = 'AiClientError';
   }
+}
+
+function publicClientMessage(code: string | undefined, message: string, fallbackError: string): string {
+  if (code === 'missing_api_key') {
+    return 'AI engine is not configured yet. Add DEEPSEEK_API_KEY in production environment variables and redeploy.';
+  }
+  if (code === 'missing_search_key') {
+    return 'Research search is not configured yet. Add TAVILY_API_KEY in production environment variables and redeploy.';
+  }
+  if (code === 'ai_provider_auth_failed') {
+    return 'AI provider rejected the API key. Check the production DEEPSEEK_API_KEY value.';
+  }
+  if (code === 'ai_rate_limited') {
+    return 'AI provider is rate limited right now. Try again in a minute.';
+  }
+  if (code === 'external_ai_unavailable' || code === 'external_connection_failed') {
+    return 'AI service is temporarily unavailable. Try again shortly.';
+  }
+  if (code === 'insufficient_desktop_tokens') {
+    return 'Not enough desktop tokens. Use Add €10 in the token wallet to continue.';
+  }
+  return message || fallbackError;
 }
 
 function normalizeError(error: unknown, fallbackError: string): AiClientError {
@@ -94,10 +116,11 @@ async function callAi<TResponse = unknown, TPayload = unknown>(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => null) as { error?: unknown; code?: unknown } | null;
     if (!res.ok) {
       const message = typeof data?.error === 'string' ? data.error : fallbackError;
-      throw new AiClientError(message, res.status, data);
+      const code = typeof data?.code === 'string' ? data.code : undefined;
+      throw new AiClientError(publicClientMessage(code, message, fallbackError), res.status, data, code);
     }
     return data as TResponse;
   } catch (error) {

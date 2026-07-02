@@ -1,4 +1,5 @@
 import 'server-only';
+import { ServerActionError } from './server/errors';
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 
@@ -23,7 +24,7 @@ export async function callDeepSeek(
   { temperature = 0.7, maxTokens = 1500, json = false }: CallOptions = {}
 ): Promise<string> {
   if (!process.env.DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY nije postavljen.');
+    throw new ServerActionError('AI engine is not configured. Missing DEEPSEEK_API_KEY.', 500, 'missing_api_key');
   }
 
   const res = await fetch(DEEPSEEK_URL, {
@@ -42,8 +43,13 @@ export async function callDeepSeek(
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`DeepSeek error ${res.status}: ${err}`);
+    throw new ServerActionError(
+      res.status === 429
+        ? 'AI provider is rate limited right now. Try again in a minute.'
+        : 'External AI service is temporarily unavailable. Try again shortly.',
+      res.status === 429 ? 429 : 502,
+      res.status === 401 || res.status === 403 ? 'ai_provider_auth_failed' : res.status === 429 ? 'ai_rate_limited' : 'external_ai_unavailable'
+    );
   }
 
   const data = await res.json();

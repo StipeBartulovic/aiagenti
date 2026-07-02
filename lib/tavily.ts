@@ -1,4 +1,5 @@
 import 'server-only';
+import { ServerActionError } from './server/errors';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
 
@@ -33,7 +34,7 @@ export async function tavilySearch(
   { maxResults = 6, depth = 'basic', includeAnswer = true, topic = 'general' }: TavilyOptions = {}
 ): Promise<TavilyResponse> {
   const key = process.env.TAVILY_API_KEY;
-  if (!key) throw new Error('TAVILY_API_KEY nije postavljen.');
+  if (!key) throw new ServerActionError('Research search is not configured. Missing TAVILY_API_KEY.', 500, 'missing_search_key');
 
   const res = await fetch(TAVILY_URL, {
     method: 'POST',
@@ -49,8 +50,13 @@ export async function tavilySearch(
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Tavily error ${res.status}: ${err}`);
+    throw new ServerActionError(
+      res.status === 429
+        ? 'Research search provider is rate limited right now. Try again in a minute.'
+        : 'Research search provider is temporarily unavailable. Try again shortly.',
+      res.status === 429 ? 429 : 502,
+      res.status === 401 || res.status === 403 ? 'search_provider_auth_failed' : res.status === 429 ? 'search_rate_limited' : 'search_unavailable'
+    );
   }
 
   const data = await res.json();

@@ -1,8 +1,8 @@
 import type { PersonaAttributes, PersonaReaction, IdeaFormData, ValidationReport, AudienceSegment, OpportunityAnalysis, EmergentCluster } from './types';
 import { generatePersonas, generatePersonasForSegments } from './personas';
 import { buildEmergentClusters } from './clustering';
+import { callDeepSeek as callDeepSeekApi, type DeepSeekMessage } from './deepseek';
 
-const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 /** Manji batch jer reakcija sad nosi i JTBD polja (veći JSON po pers/oni). */
 const BATCH_SIZE = 8;
 /** 'standard' (free) ≈ 100 agenata, 'deep' (paid) ≈ 300+. */
@@ -86,28 +86,7 @@ async function callDeepSeek(
   temperature: number,
   maxTokens: number
 ): Promise<string> {
-  const res = await fetch(DEEPSEEK_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages,
-      response_format: { type: 'json_object' },
-      temperature,
-      max_tokens: maxTokens,
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`DeepSeek error ${res.status}: ${err}`);
-  }
-
-  const data = await res.json();
-  return data.choices[0].message.content as string;
+  return callDeepSeekApi(messages as DeepSeekMessage[], { temperature, maxTokens, json: true });
 }
 
 function formatDiscoveryAnswers(form: IdeaFormData): string {
