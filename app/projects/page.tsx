@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -38,19 +38,25 @@ export default function ProjectsPage() {
       advisors: 'Savjetnici',
       advisorsHelp: 'Razgovaraj o sljedećim potezima',
       delete: 'Obriši',
-      exportFile: 'Izvezi',
-      importFile: 'Uvezi .ai-project',
-      backupWorkspace: 'Backup workspacea',
-      restoreWorkspace: 'Vrati workspace',
+      exportFile: 'Izvezi projekt',
+      importFile: 'Uvezi projekt',
+      backupWorkspace: 'Izvezi sigurnosnu kopiju',
+      restoreWorkspace: 'Vrati iz sigurnosne kopije',
       eraseAll: 'Obriši sve lokalno',
       eraseAllTitle: 'Obrisati sve lokalne projekte?',
-      eraseAllHelp: 'Ovo briše sve projekte spremljene u lokalnoj bazi ovog browsera. Prije toga napravi backup ako želiš zadržati kopiju.',
+      eraseAllHelp: 'Ovo briše sve projekte spremljene na ovom uređaju. Prije toga izvezi sigurnosnu kopiju ako želiš zadržati kopiju.',
       confirmEraseAll: 'Da, obriši sve',
       localTitle: 'Lokalna pohrana',
-      localHelp: 'Podaci su na ovom uređaju. Backup spremi sve projekte u jedan .ai-workspace file koji možeš prenijeti ili arhivirati.',
+      localHelp: 'Podaci su spremljeni na ovom uređaju. Jedan projekt izvozi se kao .ai-project, a cijeli workspace kao .ai-workspace.',
+      localSaved: 'Lokalno spremljeno',
+      localSavedAt: (value: string) => `Zadnje spremanje: ${value}`,
+      localEmpty: 'Nema lokalno spremljenih projekata',
       importError: 'Ne mogu uvesti ovu datoteku.',
       restoreError: 'Ne mogu vratiti workspace iz ove datoteke.',
-      restored: (count: number) => `Workspace vracen. Ucitano projekata: ${count}.`,
+      projectImported: 'Projekt je uvezen i spremljen lokalno.',
+      projectExported: 'Projekt je izvezen kao .ai-project datoteka.',
+      workspaceExported: 'Sigurnosna kopija workspacea je izvezena.',
+      restored: (count: number) => `Workspace je vraćen. Učitano projekata: ${count}.`,
       erased: 'Svi lokalni projekti su obrisani.',
       deleting: 'Brišem...',
       deleteTitle: 'Obrisati projekt?',
@@ -75,18 +81,24 @@ export default function ProjectsPage() {
       advisors: 'Advisors',
       advisorsHelp: 'Discuss next moves',
       delete: 'Delete',
-      exportFile: 'Export',
-      importFile: 'Import .ai-project',
-      backupWorkspace: 'Backup workspace',
-      restoreWorkspace: 'Restore workspace',
+      exportFile: 'Export project',
+      importFile: 'Import project',
+      backupWorkspace: 'Export backup',
+      restoreWorkspace: 'Restore backup',
       eraseAll: 'Erase all local',
       eraseAllTitle: 'Erase all local projects?',
-      eraseAllHelp: 'This deletes every project saved in this browser database. Create a backup first if you want to keep a copy.',
+      eraseAllHelp: 'This deletes every project saved on this device. Export a backup first if you want to keep a copy.',
       confirmEraseAll: 'Yes, erase all',
       localTitle: 'Local storage',
-      localHelp: 'Data is on this device. Backup saves all projects into one .ai-workspace file you can move or archive.',
+      localHelp: 'Data is saved on this device. One project exports as .ai-project, the whole workspace as .ai-workspace.',
+      localSaved: 'Saved locally',
+      localSavedAt: (value: string) => `Last saved: ${value}`,
+      localEmpty: 'No local projects saved',
       importError: 'Could not import this file.',
       restoreError: 'Could not restore this workspace file.',
+      projectImported: 'Project imported and saved locally.',
+      projectExported: 'Project exported as an .ai-project file.',
+      workspaceExported: 'Workspace backup exported.',
       restored: (count: number) => `Workspace restored. Projects loaded: ${count}.`,
       erased: 'All local projects were erased.',
       deleting: 'Deleting...',
@@ -101,6 +113,18 @@ export default function ProjectsPage() {
       validated: 'Validated',
     },
   }[language];
+
+  const lastSavedAt = useMemo(() => {
+    const newest = projects
+      .map((project) => Date.parse(project.updated_at || project.created_at))
+      .filter(Number.isFinite)
+      .sort((a, b) => b - a)[0];
+    if (!newest) return null;
+    return new Date(newest).toLocaleString(language === 'en' ? 'en-US' : 'hr-HR', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }, [projects, language]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -176,6 +200,7 @@ export default function ProjectsPage() {
     a.download = `${safeName}.ai-project`;
     a.click();
     URL.revokeObjectURL(url);
+    setNotice(t.projectExported);
   };
 
   const handleImport = async (file: File | null) => {
@@ -185,6 +210,7 @@ export default function ProjectsPage() {
     try {
       await importProjectFromText(await file.text());
       await refreshProjects();
+      setNotice(t.projectImported);
     } catch (err) {
       console.error('Import error:', err);
       setError(t.importError);
@@ -205,6 +231,7 @@ export default function ProjectsPage() {
     setNotice('');
     const date = new Date().toISOString().slice(0, 10);
     downloadBlob(await exportWorkspace(), `aivalidator-workspace-${date}.ai-workspace`);
+    setNotice(t.workspaceExported);
   };
 
   const handleWorkspaceRestore = async (file: File | null) => {
@@ -287,8 +314,16 @@ export default function ProjectsPage() {
       {pendingEraseAll && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-3xl border border-red-900/60 bg-zinc-900 p-6 shadow-2xl shadow-black/50">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-red-900/50 bg-red-950/30 text-red-300">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 9V13M12 17H12.01M10.3 4.4L2.7 18A2 2 0 0 0 4.45 21H19.55A2 2 0 0 0 21.3 18L13.7 4.4A2 2 0 0 0 10.3 4.4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
             <h2 className="text-xl font-bold text-white">{t.eraseAllTitle}</h2>
             <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t.eraseAllHelp}</p>
+            <div className="mt-4 rounded-2xl border border-red-900/40 bg-red-950/20 p-3 text-xs leading-relaxed text-red-100/80">
+              {projects.length} {language === 'en' ? 'local project records will be removed from this device.' : 'lokalnih zapisa projekta bit će uklonjeno s ovog uređaja.'}
+            </div>
             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
@@ -373,9 +408,17 @@ export default function ProjectsPage() {
         {!loading && (
           <section className="mb-6 rounded-2xl border border-cyan-900/40 bg-cyan-950/10 p-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-cyan-100">{t.localTitle}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-cyan-100/60">{t.localHelp}</p>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-bold text-cyan-50">{t.localTitle}</h2>
+                  <span className="rounded-full border border-emerald-800/50 bg-emerald-950/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-200">
+                    {lastSavedAt ? t.localSaved : t.localEmpty}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-cyan-100/65">{t.localHelp}</p>
+                <p className="mt-2 text-xs font-medium text-zinc-400">
+                  {lastSavedAt ? t.localSavedAt(lastSavedAt) : t.localEmpty}
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
