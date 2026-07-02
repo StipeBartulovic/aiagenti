@@ -20,6 +20,7 @@ export default function ResultsPage() {
   const [translationError, setTranslationError] = useState('');
   const [projectId, setProjectId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [authPrompt, setAuthPrompt] = useState(false);
   const [showAdvancedActions, setShowAdvancedActions] = useState(false);
 
@@ -58,6 +59,7 @@ export default function ResultsPage() {
       if (savedId) {
         setProjectId(savedId);
         setSaveState('saved');
+        setSavedAt(new Date());
       }
     });
 
@@ -83,6 +85,7 @@ export default function ResultsPage() {
         sessionStorage.setItem('aivalidator_project_id', newId);
       }
       setSaveState('saved');
+      setSavedAt(new Date());
     } catch (err) {
       console.error('Save error:', err);
       setSaveState('error');
@@ -165,6 +168,11 @@ export default function ResultsPage() {
       save: 'Spremi projekt',
       saving: 'Spremam...',
       saved: '✓ Spremljeno',
+      localSaved: 'Lokalno spremljeno',
+      localSaving: 'Spremam lokalno...',
+      localUnsaved: 'Nije spremljeno lokalno',
+      localError: 'Lokalno spremanje nije uspjelo',
+      savedAt: (value: string) => `Zadnje spremanje: ${value}`,
       saveError: 'Greška — pokušaj ponovno',
       myProjects: 'Moji projekti',
       advisors: '✨ AI Savjetnici',
@@ -200,6 +208,11 @@ export default function ResultsPage() {
       save: 'Save project',
       saving: 'Saving...',
       saved: '✓ Saved',
+      localSaved: 'Saved locally',
+      localSaving: 'Saving locally...',
+      localUnsaved: 'Not saved locally',
+      localError: 'Local save failed',
+      savedAt: (value: string) => `Last saved: ${value}`,
       saveError: 'Error — try again',
       myProjects: 'My projects',
       advisors: '✨ AI Advisors',
@@ -222,6 +235,20 @@ export default function ResultsPage() {
     }
   }[language];
   const showAuthPrompt = authPrompt && !user;
+  const savedAtLabel = savedAt
+    ? savedAt.toLocaleString(language === 'en' ? 'en-US' : 'hr-HR', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : null;
+  const localSaveLabel =
+    saveState === 'saving'
+      ? t.localSaving
+      : saveState === 'error'
+      ? t.localError
+      : saveState === 'saved'
+      ? t.localSaved
+      : t.localUnsaved;
 
   if (loading || !report) {
     return (
@@ -265,6 +292,23 @@ export default function ResultsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 lg:gap-4">
+          <div
+            className={`rounded-xl border px-3 py-1.5 text-xs ${
+              saveState === 'saved'
+                ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-200'
+                : saveState === 'saving'
+                ? 'border-cyan-800/50 bg-cyan-950/30 text-cyan-100'
+                : saveState === 'error'
+                ? 'border-red-800/60 bg-red-950/30 text-red-200'
+                : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+            }`}
+            title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
+          >
+            <span className="font-semibold">{localSaveLabel}</span>
+            {savedAtLabel && saveState === 'saved' && (
+              <span className="ml-2 hidden text-zinc-400 sm:inline">{savedAtLabel}</span>
+            )}
+          </div>
           <TokenWallet language={language} compact />
 
           {/* Language Switcher */}
@@ -471,7 +515,10 @@ export default function ResultsPage() {
             if (projectId && user && form) {
               setSaveState('saving');
               updateProject(projectId, { idea: form, report: newReport })
-                .then(() => setSaveState('saved'))
+                .then(() => {
+                  setSaveState('saved');
+                  setSavedAt(new Date());
+                })
                 .catch((err) => {
                   console.error('Auto-save updated report error:', err);
                   setSaveState('error');

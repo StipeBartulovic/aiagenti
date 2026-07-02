@@ -35,6 +35,8 @@ export default function AdvisorsPage() {
   const [panel, setPanel] = useState<ChatMessage[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [seeding, setSeeding] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [fatalError, setFatalError] = useState('');
   const bootedRef = useRef(false);
 
@@ -53,6 +55,11 @@ export default function AdvisorsPage() {
       retrySeed: 'Pokušaj ponovno',
       seedError: 'Greška pri pripremi savjetnika. Pokušaj ponovno.',
       tokenError: (missing: number) => `Priprema savjetnika treba ${formatTokens(TOKEN_COSTS.advisor_setup)} tokena. Nedostaje ${formatTokens(missing)} tokena. Klikni Dodaj 10€ u walletu za nastavak.`,
+      localSaved: 'Lokalno spremljeno',
+      localSaving: 'Spremam lokalno...',
+      localUnsaved: 'Čeka prvo spremanje',
+      localError: 'Lokalno spremanje nije uspjelo',
+      savedAt: (value: string) => `Zadnje spremanje: ${value}`,
     },
     en: {
       back: '← Back',
@@ -68,8 +75,38 @@ export default function AdvisorsPage() {
       retrySeed: 'Try again',
       seedError: 'Error preparing advisors. Try again.',
       tokenError: (missing: number) => `Advisor setup needs ${formatTokens(TOKEN_COSTS.advisor_setup)} tokens. Missing ${formatTokens(missing)} tokens. Use Add €10 in the wallet to continue.`,
+      localSaved: 'Saved locally',
+      localSaving: 'Saving locally...',
+      localUnsaved: 'Waiting for first save',
+      localError: 'Local save failed',
+      savedAt: (value: string) => `Last saved: ${value}`,
     },
   }[language];
+
+  const markSaving = () => setSaveState('saving');
+  const markSaved = () => {
+    setSaveState('saved');
+    setSavedAt(new Date());
+  };
+  const markSaveError = (err: unknown) => {
+    console.error('Advisor auto-save error:', err);
+    setSaveState('error');
+  };
+
+  const savedAtLabel = savedAt
+    ? savedAt.toLocaleString(language === 'en' ? 'en-US' : 'hr-HR', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : null;
+  const localSaveLabel =
+    saveState === 'saving'
+      ? t.localSaving
+      : saveState === 'error'
+      ? t.localError
+      : saveState === 'saved'
+      ? t.localSaved
+      : t.localUnsaved;
 
   // Auth gate
   useEffect(() => {
@@ -106,6 +143,8 @@ export default function AdvisorsPage() {
             setKnowledge(proj.knowledge);
             setPanel(proj.panel || []);
             setTasks(proj.tasks || []);
+            setSaveState('saved');
+            setSavedAt(new Date(proj.updated_at || proj.created_at));
             setBooting(false);
             return;
           }
@@ -114,6 +153,7 @@ export default function AdvisorsPage() {
         const newId = await createProject(user.uid, { idea: parsedIdea, report: parsedReport });
         sessionStorage.setItem('aivalidator_project_id', newId);
         setProjectId(newId);
+        markSaved();
         setBooting(false);
       } catch (err) {
         console.error('Boot error:', err);
@@ -140,7 +180,9 @@ export default function AdvisorsPage() {
       if (!data.knowledge) throw new Error(t.seedError);
       const kb: ProjectKnowledge = data.knowledge;
       setKnowledge(kb);
+      markSaving();
       await updateProjectKnowledge(projectId, kb);
+      markSaved();
     } catch (err) {
       console.error('Seed error:', err);
       setFatalError(err instanceof Error ? err.message : t.seedError);
@@ -155,17 +197,26 @@ export default function AdvisorsPage() {
 
   const handlePersistPanel = (messages: ChatMessage[]) => {
     setPanel(messages);
-    if (projectId) void updateProjectPanel(projectId, messages);
+    if (projectId) {
+      markSaving();
+      void updateProjectPanel(projectId, messages).then(markSaved).catch(markSaveError);
+    }
   };
 
   const handleKnowledgeUpdate = (kb: ProjectKnowledge) => {
     setKnowledge(kb);
-    if (projectId) void updateProjectKnowledge(projectId, kb);
+    if (projectId) {
+      markSaving();
+      void updateProjectKnowledge(projectId, kb).then(markSaved).catch(markSaveError);
+    }
   };
 
   const handlePersistTasks = (nextTasks: ProjectTask[]) => {
     setTasks(nextTasks);
-    if (projectId) void updateProjectTasks(projectId, nextTasks);
+    if (projectId) {
+      markSaving();
+      void updateProjectTasks(projectId, nextTasks).then(markSaved).catch(markSaveError);
+    }
   };
 
   // ── Render states ──
@@ -183,7 +234,7 @@ export default function AdvisorsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <nav className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between sticky top-0 bg-zinc-950/90 backdrop-blur-sm z-10">
+      <nav className="border-b border-zinc-800 px-6 py-4 flex flex-col gap-3 sticky top-0 bg-zinc-950/90 backdrop-blur-sm z-10 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(report ? '/results' : '/')}
@@ -201,7 +252,26 @@ export default function AdvisorsPage() {
             <span className="font-semibold text-sm text-white">{t.title}</span>
           </div>
         </div>
-        <TokenWallet language={language} compact />
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className={`rounded-xl border px-3 py-1.5 text-xs ${
+              saveState === 'saved'
+                ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-200'
+                : saveState === 'saving'
+                ? 'border-cyan-800/50 bg-cyan-950/30 text-cyan-100'
+                : saveState === 'error'
+                ? 'border-red-800/60 bg-red-950/30 text-red-200'
+                : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+            }`}
+            title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
+          >
+            <span className="font-semibold">{localSaveLabel}</span>
+            {savedAtLabel && saveState === 'saved' && (
+              <span className="ml-2 hidden text-zinc-400 sm:inline">{savedAtLabel}</span>
+            )}
+          </div>
+          <TokenWallet language={language} compact />
+        </div>
       </nav>
 
       <main className="px-4 py-8">
