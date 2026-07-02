@@ -29,9 +29,18 @@ const MAX_SUGGESTIONS = 2;
 const OPENER: AgentId = 'business';
 
 // Poruka koja TRAŽI odgovor (pitanje/zahtjev za mišljenjem) ili je očito sadržajna
-const REQUEST_HINTS = /\?|što misli|sto misli|što kaže|sto kaze|ima li (t)?ko|recite|reci |mišljenj|misljenj|savjet|predlož|predloz|what do you|thoughts|advice|feedback|should i/i;
+const REQUEST_HINTS = /\?|što misli|sto misli|što kaže|sto kaze|ima li (t)?ko|recite|reci |mišljenj|misljenj|savjet|predlož|predloz|what do you|thoughts|advice|feedback|should i|helo|hello|hej|tu si|dal smo tu|are you there|ping/i;
 const looksSubstantive = (text: string) => text.trim().length > 140 || REQUEST_HINTS.test(text);
 const TASK_HINTS = /task manager|task menad|task maker|trello|stavi (to|ovo)|dodaj (to|ovo)|napravi task|zapiši task|zapisi task|add (that|this).*task|put (that|this).*task|make (that|this).*task/i;
+
+const DIRECT_AGENT_ALIASES: Record<AgentId, string[]> = {
+  business: ['viktor', 'biznis', 'mentor'],
+  tech: ['marko', 'cto', 'tehnicki', 'tehnički', 'developer'],
+  marketing: ['lana', 'marketing', 'growth', 'marketer'],
+  legal: ['ivana', 'pravnik', 'pravnica', 'legal'],
+  sales: ['zvonko', 'sales', 'prodaja'],
+  distribution: ['mare', 'distribucija', 'distribution'],
+};
 
 export default function PanelChat({
   language,
@@ -136,6 +145,26 @@ export default function PanelChat({
     msgs
       .filter((m) => m.role !== 'system')
       .map((m) => ({ role: m.role as 'user' | 'assistant', agentId: m.agentId, content: m.content }));
+
+  const findDirectAgentMention = (text: string): AgentId | null => {
+    const normalized = text
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    for (const id of AGENT_ORDER) {
+      const aliases = DIRECT_AGENT_ALIASES[id].map((alias) =>
+        alias
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+      );
+      if (aliases.some((alias) => new RegExp(`^@?${alias}(\\b|[,.:;\\-\\s])`).test(normalized))) {
+        return id;
+      }
+    }
+    return null;
+  };
 
   const callAgent = async (
     agentId: AgentId,
@@ -380,6 +409,11 @@ export default function PanelChat({
     void runBackgroundExtract(text);
     if (TASK_HINTS.test(text)) {
       void createTaskFromConversation(text, withUser);
+      return;
+    }
+    const directAgent = findDirectAgentMention(text);
+    if (directAgent) {
+      void speak(directAgent, withUser);
       return;
     }
     void respondToUser(withUser);
