@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import IdeaForm from '@/components/IdeaForm';
 import AudiencePicker from '@/components/AudiencePicker';
 import LoadingScreen from '@/components/LoadingScreen';
-import AuthForm from '@/components/AuthForm';
 import TokenWallet from '@/components/TokenWallet';
 import SetupStatus from '@/components/SetupStatus';
 import { useAuth } from '@/context/AuthContext';
@@ -135,6 +134,11 @@ export default function Home() {
       accountTitle: 'Profil i saldo',
       accountSubtitle: 'Hosted servis i lokalni BYO profil su odvojeni, a saldo je vezan uz odabrani način rada.',
       localProfilePill: 'Lokalni profil',
+      firstStepTitle: 'AI prvi korak',
+      firstStepSubtitle: 'Napiši čime se baviš, za koga je to i kako naplaćuješ. AI će prvo složiti kontekst, pa tek onda graditi sve ostalo ispod.',
+      stepHint: 'Kreni s jednom jasnom rečenicom. Sve ostalo AI može razraditi kroz sljedeće korake.',
+      workspaceTitle: 'Profil, tokeni i setup',
+      workspaceSubtitle: 'Kad pokreneš prvi korak, ovdje pratiš lokalni profil, tokene i način rada.',
       stats: [
         { value: '50+', label: 'AI persona po testu' },
         { value: '5', label: 'AI savjetnika u panelu' },
@@ -195,6 +199,11 @@ export default function Home() {
       accountTitle: 'Profile and balance',
       accountSubtitle: 'The hosted service and the local BYO profile are separate, and the balance follows the selected mode.',
       localProfilePill: 'Local profile',
+      firstStepTitle: 'AI first step',
+      firstStepSubtitle: 'Write what you do, who it is for, and how you charge. AI should build the context first, and only then everything else below.',
+      stepHint: 'Start with one clear sentence. AI can expand the rest through the next steps.',
+      workspaceTitle: 'Profile, tokens, and setup',
+      workspaceSubtitle: 'After the first step starts, this is where you track your local profile, tokens, and working mode.',
       stats: [
         { value: '50+', label: 'AI personas per test' },
         { value: '5', label: 'AI advisors on the panel' },
@@ -268,11 +277,8 @@ export default function Home() {
           </div>
           <span className="font-semibold text-white tracking-wide text-lg font-title">AI Validator</span>
         </div>
-        
-          <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4">
-          <TokenWallet language={language} compact />
 
-          {/* Language Switcher */}
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4">
           <div className="flex bg-zinc-900/60 p-0.5 rounded-lg border border-zinc-800">
             <button
               onClick={() => setLanguage('hr')}
@@ -291,7 +297,6 @@ export default function Home() {
               EN
             </button>
           </div>
-
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <span className="rounded-full border border-emerald-800/50 bg-emerald-950/30 px-3 py-1 text-xs text-emerald-200">
               {t.localProfilePill}
@@ -317,18 +322,6 @@ export default function Home() {
 
       {/* Hero */}
       <main className="flex flex-col items-center px-4 pt-16 pb-12 relative z-10">
-        <div className="mb-10 w-full max-w-4xl space-y-4">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.accountTitle}</h2>
-              <p className="mt-1 text-sm leading-relaxed text-zinc-500">{t.accountSubtitle}</p>
-            </div>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-            <TokenWallet language={language} />
-            <SetupStatus language={language} onOpenSettings={() => router.push('/settings')} />
-          </div>
-        </div>
         <div className="text-center space-y-5 mb-12 max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-950/30 px-4.5 py-1.5 text-sm text-indigo-300 backdrop-blur-sm shadow-inner">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
@@ -353,9 +346,23 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Tok: AuthForm → IdeaForm → (traženje publika) → AudiencePicker */}
-        <div id="start" className="w-full max-w-2xl flex justify-center scroll-mt-24">
-          <div className="w-full space-y-3">
+        <section id="start" className="w-full max-w-6xl scroll-mt-24">
+          <div className="rounded-3xl border border-cyan-900/40 bg-zinc-950/70 p-5 shadow-2xl shadow-cyan-950/10 sm:p-6">
+            <div className="flex flex-col gap-4 border-b border-zinc-800 pb-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">{t.firstStepTitle}</p>
+                <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
+                  {language === 'en' ? 'Start with one sharp business sentence.' : 'Kreni s jednom oštrom poslovnom rečenicom.'}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t.firstStepSubtitle}</p>
+              </div>
+              <div className="hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 lg:block lg:max-w-[240px]">
+                <p className="font-semibold text-white">{t.localProfilePill}</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{t.stepHint}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
             {hasStoredReport && (
               <button
                 type="button"
@@ -365,40 +372,25 @@ export default function Home() {
                 {t.continueReport}
               </button>
             )}
-            <div className="w-full max-w-md space-y-3">
-              <AuthForm />
-              <div className="rounded-2xl border border-cyan-900/40 bg-cyan-950/10 p-4 text-center">
-                <p className="text-sm font-semibold text-cyan-100">{t.localStart}</p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{t.localHint}</p>
-                <p className="mt-3 text-xs leading-relaxed text-cyan-100/75">{t.localNotice}</p>
-              </div>
-            </div>
-          {loadingAudiences ? (
-            <div className="flex flex-col items-center gap-3 py-16">
-              <span className="w-8 h-8 border-4 border-zinc-800 border-t-indigo-600 rounded-full animate-spin" />
-              <span className="text-zinc-400 text-sm">{t.findingAudiences}</span>
-            </div>
-          ) : candidates ? (
-            <AudiencePicker
-              language={language}
-              segments={candidates}
-              onConfirm={handleConfirmAudiences}
-              onSkip={handleSkipAudiences}
-              onBack={handleBackToForm}
-            />
-          ) : (
-            <div className="w-full space-y-3">
-              <div className="rounded-2xl border border-cyan-900/50 bg-cyan-950/15 p-4 text-sm text-cyan-50">
-                <div className="flex flex-col gap-2">
-                  <p className="leading-relaxed">{t.localNotice}</p>
-                  <p className="text-xs text-cyan-100/70">{t.localHint}</p>
+              {loadingAudiences ? (
+                <div className="flex flex-col items-center gap-3 py-16">
+                  <span className="w-8 h-8 border-4 border-zinc-800 border-t-indigo-600 rounded-full animate-spin" />
+                  <span className="text-zinc-400 text-sm">{t.findingAudiences}</span>
                 </div>
-              </div>
-              <IdeaForm onIdeaReady={handleIdeaReady} onError={handleError} />
+              ) : candidates ? (
+                <AudiencePicker
+                  language={language}
+                  segments={candidates}
+                  onConfirm={handleConfirmAudiences}
+                  onSkip={handleSkipAudiences}
+                  onBack={handleBackToForm}
+                />
+              ) : (
+                <IdeaForm onIdeaReady={handleIdeaReady} onError={handleError} />
+              )}
             </div>
-          )}
           </div>
-        </div>
+        </section>
 
         {error && (
           <div className="mt-4 rounded-2xl bg-red-950/30 border border-red-800/50 px-4 py-4 text-red-200 text-sm max-w-2xl w-full">
@@ -428,6 +420,17 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        <section className="mt-12 w-full max-w-4xl space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.workspaceTitle}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-500">{t.workspaceSubtitle}</p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <TokenWallet language={language} />
+            <SetupStatus language={language} onOpenSettings={() => router.push('/settings')} />
+          </div>
+        </section>
 
         {/* Stats Counter Section */}
         <section className="mt-20 max-w-4xl w-full border border-zinc-900 bg-zinc-950/40 rounded-2xl p-8 backdrop-blur-sm">

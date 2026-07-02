@@ -447,7 +447,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
   const isReadyForValidation = missingRequiredCount === 0;
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-4">
+    <form onSubmit={handleSubmit} className="w-full max-w-none space-y-4">
       <section className="rounded-2xl border border-cyan-900/50 bg-gradient-to-br from-cyan-950/30 via-zinc-950 to-zinc-950 p-4 shadow-[0_0_40px_rgba(8,145,178,0.08)]">
         <div className="flex items-start justify-between gap-4 mb-3">
           <div>
@@ -572,9 +572,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Model poslovanja */}
-        <div>
+        <div className="lg:col-span-2">
           <label className="block text-sm font-medium text-zinc-300 mb-2">
             {ui.businessModel} <span className="text-indigo-400">*</span>
           </label>
@@ -652,7 +652,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
             </div>
           </>
         ) : (
-          <div>
+          <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-zinc-300 mb-1">
               {ui.detailed} <span className="text-indigo-400">*</span>
             </label>
@@ -702,7 +702,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
               </span>
             </div>
           </div>
-          <div className="grid gap-3 p-4">
+          <div className="grid gap-3 p-4 lg:grid-cols-2">
             {adaptiveQuestions.map((item, index) => (
               <div key={`${item.id}-${item.question}`} className="rounded-xl border border-zinc-800 bg-zinc-950/45 p-3">
                 <label className="block text-sm font-semibold text-zinc-100 mb-1">
@@ -721,28 +721,28 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
         </section>
       )}
 
-      <section className="rounded-2xl border border-indigo-900/40 bg-indigo-950/10 overflow-hidden">
+      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/35 overflow-hidden">
         <button
           type="button"
           onClick={() => setShowOfficeHours((v) => !v)}
-          className="w-full flex items-start justify-between gap-4 p-4 text-left cursor-pointer hover:bg-indigo-950/20 transition-colors"
+          className="w-full flex items-start justify-between gap-4 p-4 text-left cursor-pointer hover:bg-zinc-900/60 transition-colors"
         >
           <span>
-            <span className="block text-sm font-bold text-indigo-200">{officeHours.title}</span>
+            <span className="block text-sm font-bold text-zinc-200">{officeHours.title}</span>
             <span className="block text-xs text-zinc-500 leading-relaxed mt-1">{officeHours.subtitle}</span>
           </span>
-          <span className="shrink-0 rounded-full border border-indigo-700/60 px-3 py-1 text-xs font-semibold text-indigo-200">
+          <span className="shrink-0 rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-300">
             {showOfficeHours ? officeHours.hide : officeHours.show}
             {completedDiscoveryCount > 0 ? ` · ${completedDiscoveryCount}/6` : ''}
           </span>
         </button>
 
         {showOfficeHours && (
-          <div className="grid gap-3 border-t border-indigo-900/40 p-4">
+          <div className="grid gap-3 border-t border-zinc-800 p-4 lg:grid-cols-2">
             {officeHours.questions.map((item, index) => (
               <div key={item.question} className="rounded-xl border border-zinc-800 bg-zinc-950/45 p-3">
                 <label className="block text-sm font-semibold text-zinc-100 mb-1">
-                  <span className="text-indigo-400">{index + 1}.</span> {item.question}
+                  <span className="text-cyan-400">{index + 1}.</span> {item.question}
                 </label>
                 <p className="text-[11px] text-zinc-500 mb-2 leading-relaxed">{item.help}</p>
                 <textarea
@@ -761,14 +761,14 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
       <button
         type="button"
         onClick={() => setShowAdvanced((v) => !v)}
-        className="text-sm text-zinc-400 hover:text-indigo-400 transition-colors flex items-center gap-1"
+        className="inline-flex items-center gap-2 self-start rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
       >
         <span className="text-lg leading-none">{showAdvanced ? '−' : '+'}</span>
         {showAdvanced ? ui.advancedHide : ui.advancedShow}
       </button>
 
       {showAdvanced && (
-        <div className="grid gap-4 border border-zinc-800 rounded-lg p-4 bg-zinc-900/50">
+        <div className="grid gap-4 border border-zinc-800 rounded-2xl p-4 bg-zinc-900/50 lg:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-zinc-300 mb-1">
               {ui.targetMarket}

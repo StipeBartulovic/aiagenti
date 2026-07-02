@@ -13,7 +13,6 @@ import {
 import OnboardingChat from '@/components/OnboardingChat';
 import PanelChat from '@/components/PanelChat';
 import TokenWallet from '@/components/TokenWallet';
-import AccountModeNotice from '@/components/AccountModeNotice';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
@@ -63,6 +62,7 @@ export default function AdvisorsPage() {
       localUnsaved: 'Čeka prvo spremanje',
       localError: 'Lokalno spremanje nije uspjelo',
       savedAt: (value: string) => `Zadnje spremanje: ${value}`,
+      subtitle: 'Jedan razgovor, više savjetnika i taskovi na jednom mjestu.',
     },
     en: {
       back: '← Back',
@@ -83,6 +83,7 @@ export default function AdvisorsPage() {
       localUnsaved: 'Waiting for first save',
       localError: 'Local save failed',
       savedAt: (value: string) => `Last saved: ${value}`,
+      subtitle: 'One conversation, multiple advisors, and tasks in one place.',
     },
   }[language];
 
@@ -252,10 +253,14 @@ export default function AdvisorsPage() {
                 <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fillOpacity="0.9" />
               </svg>
             </div>
-            <span className="font-semibold text-sm text-white">{t.title}</span>
+            <div>
+              <span className="font-semibold text-sm text-white">{t.title}</span>
+              <p className="hidden text-xs text-zinc-500 sm:block">{t.subtitle}</p>
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <TokenWallet language={language} compact />
           <button
             type="button"
             onClick={() => router.push('/settings')}
@@ -281,10 +286,6 @@ export default function AdvisorsPage() {
             {savedAtLabel && saveState === 'saved' && (
               <span className="ml-2 hidden text-zinc-400 sm:inline">{savedAtLabel}</span>
             )}
-          </div>
-          <TokenWallet language={language} compact />
-          <div className="hidden min-w-[250px] lg:block">
-            <AccountModeNotice language={language} compact />
           </div>
         </div>
       </nav>
