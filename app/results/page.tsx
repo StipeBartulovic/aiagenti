@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import Dashboard from '@/components/Dashboard';
 import ObsidianSync from '@/components/ObsidianSync';
 import TokenWallet from '@/components/TokenWallet';
+import AccountModeNotice from '@/components/AccountModeNotice';
 import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
 import { createProject, updateProject } from '@/lib/projects';
 import type { ValidationReport, IdeaFormData } from '@/lib/types';
+import { Settings2 } from 'lucide-react';
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -21,7 +23,6 @@ export default function ResultsPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-  const [authPrompt, setAuthPrompt] = useState(false);
   const [showAdvancedActions, setShowAdvancedActions] = useState(false);
 
   useEffect(() => {
@@ -70,17 +71,14 @@ export default function ResultsPage() {
 
   const handleSave = async () => {
     if (!report || !form || saveState === 'saving') return;
-    if (!user) {
-      setAuthPrompt(true);
-      return;
-    }
+    const ownerUid = user?.uid ?? 'local-profile';
     setSaveState('saving');
     try {
       const input = { idea: form, report };
       if (projectId) {
         await updateProject(projectId, input);
       } else {
-        const newId = await createProject(user.uid, input);
+        const newId = await createProject(ownerUid, input);
         setProjectId(newId);
         sessionStorage.setItem('aivalidator_project_id', newId);
       }
@@ -176,11 +174,8 @@ export default function ResultsPage() {
       saveError: 'Greška — pokušaj ponovno',
       myProjects: 'Moji projekti',
       advisors: '✨ AI Savjetnici',
-      signInToSave: 'Prijavi se za spremanje',
-      signInForAdvisors: 'Prijavi se za savjetnike',
-      authPromptTitle: 'Za ovu akciju treba račun',
-      authPromptText: 'Rezultat možeš čitati kao gost, ali za spremanje projekta i AI savjetnike treba prijava.',
-      authPromptCta: 'Idi na prijavu',
+      localProfileTitle: 'Lokalni profil radi',
+      localProfileText: 'Izvještaj možeš spremiti, otvoriti savjetnike i nastaviti rad bez cloud prijave.',
       nextTitle: 'Što sada?',
       nextSubtitle: 'Ako nisi siguran što kliknuti, kreni ovim redom.',
       nextSave: '1. Spremi projekt',
@@ -216,11 +211,8 @@ export default function ResultsPage() {
       saveError: 'Error — try again',
       myProjects: 'My projects',
       advisors: '✨ AI Advisors',
-      signInToSave: 'Sign in to save',
-      signInForAdvisors: 'Sign in for advisors',
-      authPromptTitle: 'This action needs an account',
-      authPromptText: 'You can read the result as a guest, but saving projects and AI advisors require sign-in.',
-      authPromptCta: 'Go to sign-in',
+      localProfileTitle: 'Local profile is active',
+      localProfileText: 'You can save this report, open advisors, and keep working without any cloud sign-in.',
       nextTitle: 'What now?',
       nextSubtitle: 'If you are not sure what to click, start in this order.',
       nextSave: '1. Save project',
@@ -234,7 +226,6 @@ export default function ResultsPage() {
       translationErrorHelp: 'The report was left unchanged. Try again in a few seconds.',
     }
   }[language];
-  const showAuthPrompt = authPrompt && !user;
   const savedAtLabel = savedAt
     ? savedAt.toLocaleString(language === 'en' ? 'en-US' : 'hr-HR', {
         dateStyle: 'medium',
@@ -310,6 +301,9 @@ export default function ResultsPage() {
             )}
           </div>
           <TokenWallet language={language} compact />
+          <div className="hidden min-w-[250px] lg:block">
+            <AccountModeNotice language={language} compact />
+          </div>
 
           {/* Language Switcher */}
           <div className="flex bg-zinc-900 p-0.5 rounded-lg border border-zinc-800">
@@ -335,16 +329,24 @@ export default function ResultsPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => user ? router.push('/advisors') : setAuthPrompt(true)}
+              onClick={() => router.push('/advisors')}
               className="text-xs font-medium text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-lg px-3 py-1.5 transition-colors cursor-pointer shadow-lg shadow-indigo-600/20"
             >
-              {user ? t.advisors : t.signInForAdvisors}
+              {t.advisors}
             </button>
             <button
               onClick={() => router.push('/projects')}
               className="text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-lg px-3 py-1.5 transition-colors cursor-pointer hidden sm:inline-block"
             >
               {t.myProjects}
+            </button>
+            <button
+              onClick={() => router.push('/settings')}
+              className="inline-flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+              title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              {language === 'en' ? 'Settings' : 'Postavke'}
             </button>
             <button
               onClick={() => setShowAdvancedActions((value) => !value)}
@@ -369,7 +371,7 @@ export default function ResultsPage() {
                 ? t.saved
                 : saveState === 'error'
                 ? t.saveError
-                : user ? t.save : t.signInToSave}
+                : t.save}
             </button>
             <button
               onClick={handleNewTest}
@@ -435,23 +437,21 @@ export default function ResultsPage() {
 
       {/* Dashboard */}
       <div className="px-4 py-8">
-        {showAuthPrompt && (
-          <div className="mx-auto mb-6 max-w-7xl rounded-2xl border border-amber-800/50 bg-amber-950/20 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-bold text-amber-200">{t.authPromptTitle}</p>
-                <p className="mt-1 text-xs text-amber-100/70">{t.authPromptText}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => router.push('/')}
-                className="rounded-xl bg-amber-300 px-4 py-2.5 text-xs font-black text-zinc-950 hover:bg-amber-200"
-              >
-                {t.authPromptCta}
-              </button>
+        <div className="mx-auto mb-6 max-w-7xl rounded-2xl border border-cyan-900/40 bg-cyan-950/15 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-bold text-cyan-100">{t.localProfileTitle}</p>
+              <p className="mt-1 text-xs text-cyan-100/70">{t.localProfileText}</p>
             </div>
+            <button
+              type="button"
+              onClick={() => router.push('/projects')}
+              className="rounded-xl border border-cyan-800/60 px-4 py-2.5 text-xs font-bold text-cyan-100 transition-colors hover:border-cyan-500 hover:text-white"
+            >
+              {t.myProjects}
+            </button>
           </div>
-        )}
+        </div>
         {translationError && (
           <div className="mx-auto mb-6 max-w-7xl rounded-2xl border border-red-900/60 bg-red-950/25 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -487,14 +487,14 @@ export default function ResultsPage() {
                     : 'border border-zinc-800 bg-zinc-950/60 text-zinc-200 hover:border-emerald-700'
                 }`}
               >
-                {saveState === 'saved' ? t.saved : saveState === 'saving' ? t.saving : user ? t.nextSave : t.signInToSave}
+                {saveState === 'saved' ? t.saved : saveState === 'saving' ? t.saving : t.nextSave}
               </button>
               <button
                 type="button"
-                onClick={() => user ? router.push('/advisors') : setAuthPrompt(true)}
+                onClick={() => router.push('/advisors')}
                 className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-left text-xs font-bold text-zinc-200 transition-colors hover:border-indigo-700"
               >
-                {user ? t.nextAdvisors : t.signInForAdvisors}
+                {t.nextAdvisors}
               </button>
               <button
                 type="button"

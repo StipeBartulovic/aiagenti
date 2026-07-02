@@ -1,5 +1,6 @@
 import 'server-only';
 import { ServerActionError } from './server/errors';
+import { readEnvValue } from './env';
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 
@@ -23,7 +24,8 @@ export async function callDeepSeek(
   messages: DeepSeekMessage[],
   { temperature = 0.7, maxTokens = 1500, json = false }: CallOptions = {}
 ): Promise<string> {
-  if (!process.env.DEEPSEEK_API_KEY) {
+  const apiKey = readEnvValue('DEEPSEEK_API_KEY');
+  if (!apiKey) {
     throw new ServerActionError('AI engine is not configured. Missing DEEPSEEK_API_KEY.', 500, 'missing_api_key');
   }
 
@@ -31,7 +33,7 @@ export async function callDeepSeek(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model: 'deepseek-chat',

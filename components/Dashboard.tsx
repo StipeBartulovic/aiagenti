@@ -29,6 +29,7 @@ import type { ValidationReport, IdeaFormData, PricingAnalysis, ResearchAngle, Re
 import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
+import { tokenShortfallMessage } from '@/lib/token-messages';
 
 const BUY_COLOR = '#22c55e';
 const MAYBE_COLOR = '#eab308';
@@ -38,9 +39,7 @@ const ACCENT = '#6366f1';
 function spendOrExplain(cost: number, language: 'hr' | 'en', label: string): string | null {
   const spent = spendTokens(cost);
   if (spent.ok) return null;
-  return language === 'en'
-    ? `${label} needs ${formatTokens(cost)} tokens. Missing ${formatTokens(spent.missing)} tokens. Use Add €10 in the wallet to continue.`
-    : `${label} treba ${formatTokens(cost)} tokena. Nedostaje ${formatTokens(spent.missing)} tokena. Klikni Dodaj 10€ u walletu za nastavak.`;
+  return tokenShortfallMessage(language, label, cost, spent.missing);
 }
 
 interface ScoreRingProps {

@@ -7,19 +7,21 @@ import AudiencePicker from '@/components/AudiencePicker';
 import LoadingScreen from '@/components/LoadingScreen';
 import AuthForm from '@/components/AuthForm';
 import TokenWallet from '@/components/TokenWallet';
+import SetupStatus from '@/components/SetupStatus';
 import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, addSimulatedPurchase, formatTokens, spendTokens } from '@/lib/tokens';
+import { tokenShortfallMessage } from '@/lib/token-messages';
+import { Settings2 } from 'lucide-react';
 import type { IdeaFormData, SegmentSpec } from '@/lib/types';
 
 export default function Home() {
   const router = useRouter();
-  const { user, loading: authLoading, logout, language, setLanguage } = useAuth();
+  const { user, loading: authLoading, language, setLanguage } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingAudiences, setLoadingAudiences] = useState(false);
   const [error, setError] = useState('');
   const [mockTab, setMockTab] = useState<'summary' | 'objections' | 'questions'>('summary');
-  const [guestMode, setGuestMode] = useState(false);
   const [hasStoredReport, setHasStoredReport] = useState(() =>
     typeof window !== 'undefined' ? Boolean(window.sessionStorage.getItem('aivalidator_report')) : false
   );
@@ -56,9 +58,7 @@ export default function Home() {
   const requireTokens = (cost: number, label: string) => {
     const result = spendTokens(cost);
     if (result.ok) return true;
-    setError(language === 'en'
-      ? `${label} needs ${formatTokens(cost)} tokens. You are missing ${formatTokens(result.missing)} tokens. Use Add €10 in the token wallet to continue testing.`
-      : `${label} treba ${formatTokens(cost)} tokena. Nedostaje ti ${formatTokens(result.missing)} tokena. Klikni Dodaj 10€ u token walletu za nastavak testiranja.`);
+    setError(tokenShortfallMessage(language, label, cost, result.missing));
     return false;
   };
 
@@ -132,18 +132,20 @@ export default function Home() {
       findingAudiences: 'Tražim ciljane publike za tvoju ideju...',
       logoutBtn: 'Odjavi se',
       myProjectsBtn: 'Moji projekti',
-      freePill: 'Beta · besplatno',
+      accountTitle: 'Profil i saldo',
+      accountSubtitle: 'Hosted servis i lokalni BYO profil su odvojeni, a saldo je vezan uz odabrani način rada.',
+      localProfilePill: 'Lokalni profil',
       stats: [
         { value: '50+', label: 'AI persona po testu' },
         { value: '5', label: 'AI savjetnika u panelu' },
         { value: '~30s', label: 'do punog izvještaja' },
       ],
       previewTitle: 'Pogledaj kako izgleda izvještaj',
-      previewSubtitle: 'Isprobaj interaktivnu simulaciju primjera izvještaja prije prijave.',
+      previewSubtitle: 'Isprobaj interaktivnu simulaciju primjera izvještaja iz lokalnog profila.',
       pricingTitle: 'Pay as you go tokeni',
       pricingSubtitle: 'Kupi tokene kad ti trebaju. Svaka validacija, alat ili savjetnicki odgovor trosi samo ono sto stvarno pokrenes.',
       pricingPlans: [
-        { name: 'Startni bonus', price: '3.600', period: ' tokena', desc: 'Dobijes ga automatski pri prvom ulasku ili prijavi.', features: ['1 validacija s 50 persona', 'Prijedlog ciljanih publika', 'Nekoliko report alata', 'Oko 10 brzih upita savjetnicima', 'Bez kartice i bez pretplate'], btn: 'Kreni besplatno', active: false },
+        { name: 'Startni bonus', price: '3.600', period: ' tokena', desc: 'Dobijes ga automatski pri prvom otvaranju lokalnog profila.', features: ['1 validacija s 50 persona', 'Prijedlog ciljanih publika', 'Nekoliko report alata', 'Oko 10 brzih upita savjetnicima', 'Bez kartice i bez pretplate'], btn: 'Kreni besplatno', active: false },
         { name: 'Test top-up', price: '10€', period: ' = 10.000 tokena', desc: 'Simulirana kupnja za testiranje UX-a naplate.', features: ['Klik i tokeni se odmah dodaju', 'Nema checkouta ni stvarne naplate', 'Tokeni se trose po akciji', 'Saldo ostaje u ovom browseru', 'Kasnije se spaja na pravi payment'], btn: 'Dodaj 10€ tokena', active: true },
         { name: 'Pay as you go', price: '0€', period: ' mjesecno', desc: 'Nema mjesecne obveze. Placas samo kad koristis AI.', features: ['Validacija: 1.200 tokena', 'Report alati: 250-550 tokena', 'Savjetnik: 140 tokena', 'Dublji savjetnik: 380 tokena', 'Memorija i taskovi: mali dodatni trosak'], btn: 'Pogledaj wallet', active: false },
       ],
@@ -164,10 +166,9 @@ export default function Home() {
       mockQuestion2: 'Koje analitičke alate nudite restoranima unutar platforme?',
       mockAnswerPlaceholder: 'Upiši odgovor i pojasni ideju...',
       mockButton: 'Isprobaj re-analizu (Odgovori)',
-      guestStart: 'Preskoči prijavu i testiraj ideju',
-      guestHint: 'Račun ti treba tek ako želiš spremiti projekt i otvoriti AI savjetnike.',
-      guestNotice: 'Guest test: rezultat će ostati u ovom browseru. Za spremanje se prijavi nakon analize.',
-      signInInstead: 'Vrati me na prijavu',
+      localStart: 'Lokalni profil je spreman za testiranje',
+      localHint: 'Odmah možeš validirati ideju, spremiti projekt i otvoriti AI savjetnike bez dodatne prijave.',
+      localNotice: 'Sve što napraviš ostaje lokalno na ovom uređaju dok ne izvezeš projekt ili workspace.',
       continueReport: 'Vrati se na zadnji izvještaj',
       errorTitle: 'Analiza nije uspjela',
       errorHelp: 'Ništa nije izgubljeno. Možeš pokušati ponovno ili promijeniti opis ideje.',
@@ -191,18 +192,20 @@ export default function Home() {
       findingAudiences: 'Finding target audiences for your idea...',
       logoutBtn: 'Log out',
       myProjectsBtn: 'My projects',
-      freePill: 'Beta · free',
+      accountTitle: 'Profile and balance',
+      accountSubtitle: 'The hosted service and the local BYO profile are separate, and the balance follows the selected mode.',
+      localProfilePill: 'Local profile',
       stats: [
         { value: '50+', label: 'AI personas per test' },
         { value: '5', label: 'AI advisors on the panel' },
         { value: '~30s', label: 'to a full report' },
       ],
       previewTitle: 'See Report in Action',
-      previewSubtitle: 'Interact with a live demo report preview before creating an account.',
+      previewSubtitle: 'Interact with a live demo report preview from your local profile.',
       pricingTitle: 'Pay as you go tokens',
       pricingSubtitle: 'Buy tokens when you need them. Every validation, tool, or advisor answer spends only what you actually run.',
       pricingPlans: [
-        { name: 'Starter bonus', price: '3,600', period: ' tokens', desc: 'Granted automatically on first visit or sign-in.', features: ['1 validation with 50 personas', 'Target audience suggestions', 'A few report tools', 'Around 10 quick advisor questions', 'No card and no subscription'], btn: 'Start free', active: false },
+        { name: 'Starter bonus', price: '3,600', period: ' tokens', desc: 'Granted automatically when your local profile opens for the first time.', features: ['1 validation with 50 personas', 'Target audience suggestions', 'A few report tools', 'Around 10 quick advisor questions', 'No card and no subscription'], btn: 'Start free', active: false },
         { name: 'Test top-up', price: '€10', period: ' = 10,000 tokens', desc: 'Simulated purchase for testing the billing UX.', features: ['Click and tokens are added instantly', 'No checkout or real charge', 'Tokens are spent per action', 'Balance stays in this browser', 'Ready for real payment later'], btn: 'Add €10 tokens', active: true },
         { name: 'Pay as you go', price: '€0', period: ' monthly', desc: 'No monthly commitment. Pay only when you use AI.', features: ['Validation: 1,200 tokens', 'Report tools: 250-550 tokens', 'Advisor: 140 tokens', 'Deep advisor: 380 tokens', 'Memory and tasks: small extra cost'], btn: 'Open wallet', active: false },
       ],
@@ -223,10 +226,9 @@ export default function Home() {
       mockQuestion2: 'What analytical tools do you provide for restaurant partners?',
       mockAnswerPlaceholder: 'Type clarification or answer...',
       mockButton: 'Try Re-analysis (Answer)',
-      guestStart: 'Skip sign-up and test an idea',
-      guestHint: 'You only need an account when you want to save the project and open AI advisors.',
-      guestNotice: 'Guest test: the result stays in this browser. Sign in after the analysis to save it.',
-      signInInstead: 'Back to sign-in',
+      localStart: 'Your local profile is ready',
+      localHint: 'You can validate ideas, save projects, and open AI advisors right away without any extra sign-in.',
+      localNotice: 'Everything stays local on this device until you export a project or workspace.',
       continueReport: 'Return to latest report',
       errorTitle: 'Analysis failed',
       errorHelp: 'Nothing was lost. You can retry or edit the idea description.',
@@ -290,34 +292,42 @@ export default function Home() {
             </button>
           </div>
 
-          {user ? (
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-              <span className="max-w-[180px] truncate text-xs text-zinc-400 hidden sm:inline">{user.email}</span>
-              <button
-                onClick={() => router.push('/projects')}
-                className="text-xs text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
-              >
-                {t.myProjectsBtn}
-              </button>
-              <button
-                onClick={logout}
-                className="text-xs text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
-              >
-                {t.logoutBtn}
-              </button>
-            </div>
-          ) : (
-            <span className="text-xs text-zinc-500 border border-zinc-800 rounded-full px-3 py-1 bg-zinc-900/30">
-              {t.freePill}
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <span className="rounded-full border border-emerald-800/50 bg-emerald-950/30 px-3 py-1 text-xs text-emerald-200">
+              {t.localProfilePill}
             </span>
-          )}
+            <span className="max-w-[180px] truncate text-xs text-zinc-400 hidden sm:inline">{user?.email}</span>
+            <button
+              onClick={() => router.push('/projects')}
+              className="text-xs text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+            >
+              {t.myProjectsBtn}
+            </button>
+            <button
+              onClick={() => router.push('/settings')}
+              className="inline-flex items-center gap-1.5 text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+              title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              {language === 'en' ? 'Settings' : 'Postavke'}
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* Hero */}
       <main className="flex flex-col items-center px-4 pt-16 pb-12 relative z-10">
-        <div className="mb-8 w-full max-w-2xl">
-          <TokenWallet language={language} />
+        <div className="mb-10 w-full max-w-4xl space-y-4">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.accountTitle}</h2>
+              <p className="mt-1 text-sm leading-relaxed text-zinc-500">{t.accountSubtitle}</p>
+            </div>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+            <TokenWallet language={language} />
+            <SetupStatus language={language} onOpenSettings={() => router.push('/settings')} />
+          </div>
         </div>
         <div className="text-center space-y-5 mb-12 max-w-3xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-950/30 px-4.5 py-1.5 text-sm text-indigo-300 backdrop-blur-sm shadow-inner">
@@ -346,31 +356,24 @@ export default function Home() {
         {/* Tok: AuthForm → IdeaForm → (traženje publika) → AudiencePicker */}
         <div id="start" className="w-full max-w-2xl flex justify-center scroll-mt-24">
           <div className="w-full space-y-3">
-          {hasStoredReport && (
-            <button
-              type="button"
-              onClick={() => router.push('/results')}
-              className="w-full rounded-2xl border border-emerald-800/50 bg-emerald-950/20 px-4 py-3 text-sm font-bold text-emerald-200 transition-colors hover:border-emerald-500 hover:text-white"
-            >
-              {t.continueReport}
-            </button>
-          )}
-          {!user && !guestMode ? (
+            {hasStoredReport && (
+              <button
+                type="button"
+                onClick={() => router.push('/results')}
+                className="w-full rounded-2xl border border-emerald-800/50 bg-emerald-950/20 px-4 py-3 text-sm font-bold text-emerald-200 transition-colors hover:border-emerald-500 hover:text-white"
+              >
+                {t.continueReport}
+              </button>
+            )}
             <div className="w-full max-w-md space-y-3">
               <AuthForm />
               <div className="rounded-2xl border border-cyan-900/40 bg-cyan-950/10 p-4 text-center">
-                <p className="text-sm font-semibold text-cyan-100">{t.guestStart}</p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{t.guestHint}</p>
-                <button
-                  type="button"
-                  onClick={() => setGuestMode(true)}
-                  className="mt-3 w-full rounded-xl border border-cyan-700/60 bg-cyan-950/30 px-4 py-2.5 text-sm font-bold text-cyan-100 transition-colors hover:border-cyan-400 hover:text-white"
-                >
-                  {t.guestStart}
-                </button>
+                <p className="text-sm font-semibold text-cyan-100">{t.localStart}</p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{t.localHint}</p>
+                <p className="mt-3 text-xs leading-relaxed text-cyan-100/75">{t.localNotice}</p>
               </div>
             </div>
-          ) : loadingAudiences ? (
+          {loadingAudiences ? (
             <div className="flex flex-col items-center gap-3 py-16">
               <span className="w-8 h-8 border-4 border-zinc-800 border-t-indigo-600 rounded-full animate-spin" />
               <span className="text-zinc-400 text-sm">{t.findingAudiences}</span>
@@ -385,20 +388,12 @@ export default function Home() {
             />
           ) : (
             <div className="w-full space-y-3">
-              {!user && guestMode && (
-                <div className="rounded-2xl border border-cyan-900/50 bg-cyan-950/15 p-4 text-sm text-cyan-50">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="leading-relaxed">{t.guestNotice}</p>
-                    <button
-                      type="button"
-                      onClick={() => setGuestMode(false)}
-                      className="shrink-0 rounded-lg border border-cyan-800 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:border-cyan-500"
-                    >
-                      {t.signInInstead}
-                    </button>
-                  </div>
+              <div className="rounded-2xl border border-cyan-900/50 bg-cyan-950/15 p-4 text-sm text-cyan-50">
+                <div className="flex flex-col gap-2">
+                  <p className="leading-relaxed">{t.localNotice}</p>
+                  <p className="text-xs text-cyan-100/70">{t.localHint}</p>
                 </div>
-              )}
+              </div>
               <IdeaForm onIdeaReady={handleIdeaReady} onError={handleError} />
             </div>
           )}

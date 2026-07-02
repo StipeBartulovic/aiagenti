@@ -13,8 +13,11 @@ import {
 import OnboardingChat from '@/components/OnboardingChat';
 import PanelChat from '@/components/PanelChat';
 import TokenWallet from '@/components/TokenWallet';
+import AccountModeNotice from '@/components/AccountModeNotice';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
+import { tokenShortfallMessage } from '@/lib/token-messages';
+import { Settings2 } from 'lucide-react';
 import type {
   IdeaFormData,
   ValidationReport,
@@ -54,7 +57,7 @@ export default function AdvisorsPage() {
       errorHelp: 'Možeš pokušati ponovno bez dodatnog razgovora ili se vratiti na izvještaj i nastaviti od tamo.',
       retrySeed: 'Pokušaj ponovno',
       seedError: 'Greška pri pripremi savjetnika. Pokušaj ponovno.',
-      tokenError: (missing: number) => `Priprema savjetnika treba ${formatTokens(TOKEN_COSTS.advisor_setup)} tokena. Nedostaje ${formatTokens(missing)} tokena. Klikni Dodaj 10€ u walletu za nastavak.`,
+      tokenError: (missing: number) => tokenShortfallMessage('hr', 'Priprema savjetnika', TOKEN_COSTS.advisor_setup, missing),
       localSaved: 'Lokalno spremljeno',
       localSaving: 'Spremam lokalno...',
       localUnsaved: 'Čeka prvo spremanje',
@@ -74,7 +77,7 @@ export default function AdvisorsPage() {
       errorHelp: 'You can retry without the extra chat or go back to the report and continue there.',
       retrySeed: 'Try again',
       seedError: 'Error preparing advisors. Try again.',
-      tokenError: (missing: number) => `Advisor setup needs ${formatTokens(TOKEN_COSTS.advisor_setup)} tokens. Missing ${formatTokens(missing)} tokens. Use Add €10 in the wallet to continue.`,
+      tokenError: (missing: number) => tokenShortfallMessage('en', 'Advisor setup', TOKEN_COSTS.advisor_setup, missing),
       localSaved: 'Saved locally',
       localSaving: 'Saving locally...',
       localUnsaved: 'Waiting for first save',
@@ -253,6 +256,15 @@ export default function AdvisorsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.push('/settings')}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+            title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            {language === 'en' ? 'Settings' : 'Postavke'}
+          </button>
           <div
             className={`rounded-xl border px-3 py-1.5 text-xs ${
               saveState === 'saved'
@@ -271,6 +283,9 @@ export default function AdvisorsPage() {
             )}
           </div>
           <TokenWallet language={language} compact />
+          <div className="hidden min-w-[250px] lg:block">
+            <AccountModeNotice language={language} compact />
+          </div>
         </div>
       </nav>
 

@@ -1,7 +1,9 @@
+import { readEnvValue } from '@/lib/env';
+
 export const runtime = 'nodejs';
 
 function configured(name: string): boolean {
-  return Boolean(process.env[name]?.trim());
+  return Boolean(readEnvValue(name));
 }
 
 export async function GET() {

@@ -6,12 +6,12 @@ export default function AuthForm() {
   const { language } = useAuth();
   const t = language === 'en'
     ? {
-        title: 'Local-first mode',
-        body: 'No cloud account is required. Projects are saved locally in this browser and can be exported as .ai-project files.',
+        title: 'Local profile is active',
+        body: 'No cloud sign-in is required. Your tests and projects stay on this device and can be exported as .ai-project files whenever you want.',
       }
     : {
-        title: 'Lokalni nacin rada',
-        body: 'Cloud racun nije potreban. Projekti se spremaju lokalno u ovom browseru i mogu se izvesti kao .ai-project datoteke.',
+        title: 'Lokalni profil je aktivan',
+        body: 'Cloud prijava nije potrebna. Tvoji testovi i projekti ostaju na ovom uređaju i možeš ih izvesti kao .ai-project datoteke kad god želiš.',
       };
 
   return (

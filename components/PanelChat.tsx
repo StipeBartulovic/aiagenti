@@ -6,6 +6,7 @@ import { aiClient } from '@/lib/ai-client';
 import { buildAgentContext } from '@/lib/knowledge';
 import KnowledgePanel from './KnowledgePanel';
 import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
+import { tokenShortfallMessage } from '@/lib/token-messages';
 import type { AgentId, ChatMessage, ProjectKnowledge, ProjectTask, ResearchSource } from '@/lib/types';
 
 interface Suggestion {
@@ -88,7 +89,7 @@ export default function PanelChat({
       due: 'Rok',
       source: 'Iz razgovora',
       error: 'Greška u komunikaciji. Pokušaj ponovno.',
-      tokenError: (cost: number, missing: number) => `Odgovor savjetnika treba ${formatTokens(cost)} tokena. Nedostaje ${formatTokens(missing)} tokena. Klikni Dodaj 10€ u walletu za nastavak.`,
+      tokenError: (cost: number, missing: number) => tokenShortfallMessage('hr', 'Odgovor savjetnika', cost, missing),
       panelTitle: 'Tvoj savjetnički panel',
       deepMode: 'Dublji odgovor',
       deepModeHint: 'Skuplje, sporije, ali detaljnije',
@@ -113,7 +114,7 @@ export default function PanelChat({
       due: 'Due',
       source: 'From chat',
       error: 'Communication error. Try again.',
-      tokenError: (cost: number, missing: number) => `Advisor answer needs ${formatTokens(cost)} tokens. Missing ${formatTokens(missing)} tokens. Use Add €10 in the wallet to continue.`,
+      tokenError: (cost: number, missing: number) => tokenShortfallMessage('en', 'Advisor answer', cost, missing),
       panelTitle: 'Your advisory panel',
       deepMode: 'Deep answer',
       deepModeHint: 'More tokens, slower, more detailed',

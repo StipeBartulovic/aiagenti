@@ -1,6 +1,7 @@
 'use client';
 
 import { getTauriInvoke } from './tauri';
+import { desktopTokenShortfallMessage } from './token-messages';
 
 type ApiEndpoint =
   | 'angles'
@@ -84,7 +85,7 @@ function publicClientMessage(code: string | undefined, message: string, fallback
     return 'AI service is temporarily unavailable. Try again shortly.';
   }
   if (code === 'insufficient_desktop_tokens') {
-    return 'Not enough desktop tokens. Use Add €10 in the token wallet to continue.';
+    return desktopTokenShortfallMessage('en');
   }
   return message || fallbackError;
 }

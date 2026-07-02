@@ -8,6 +8,7 @@ use thiserror::Error;
 
 const LOCAL_OWNER_UID: &str = "local-profile";
 const WORKSPACE_FORMAT: &str = "aivalidator.workspace.v1";
+const SETTINGS_FORMAT: &str = "aivalidator.settings.v1";
 const DEFAULT_DESKTOP_AI_URL: &str = "http://localhost:3000/api/desktop/ai";
 const DEFAULT_DESKTOP_WALLET_URL: &str = "http://localhost:3000/api/desktop/wallet";
 
@@ -62,6 +63,10 @@ fn device_path() -> CommandResult<PathBuf> {
   Ok(workspace_dir()?.join("device.json"))
 }
 
+fn settings_path() -> CommandResult<PathBuf> {
+  Ok(workspace_dir()?.join("settings.json"))
+}
+
 fn desktop_account_id() -> CommandResult<String> {
   let path = device_path()?;
   if path.exists() {
@@ -84,6 +89,67 @@ fn desktop_account_id() -> CommandResult<String> {
     }))?,
   )?;
   Ok(id)
+}
+
+fn read_settings() -> CommandResult<Value> {
+  let path = settings_path()?;
+  if !path.exists() {
+    return Ok(json!({
+      "format": SETTINGS_FORMAT,
+      "hostingMode": "hosted",
+      "workspaceName": "AI Validator",
+      "deepseekApiKey": "",
+      "tavilyApiKey": "",
+      "githubToken": "",
+      "upstashRedisRestUrl": "",
+      "upstashRedisRestToken": "",
+      "desktopSharedSecret": "",
+      "aiValidatorDesktopApiKey": "",
+      "aiValidatorDesktopApiUrl": "",
+      "aiValidatorDesktopWalletUrl": "",
+    }));
+  }
+
+  let text = fs::read_to_string(path)?;
+  let parsed: Value = serde_json::from_str(&text)?;
+  Ok(parsed)
+}
+
+fn read_settings_value(key: &str) -> Option<String> {
+  read_settings()
+    .ok()
+    .and_then(|settings| settings.get(key).and_then(Value::as_str).map(|value| value.trim().to_owned()))
+    .filter(|value| !value.is_empty())
+}
+
+fn write_settings(settings: &Value) -> CommandResult<()> {
+  let path = settings_path()?;
+  let mut body = settings.clone();
+  if let Some(obj) = body.as_object_mut() {
+    obj.insert("format".into(), Value::String(SETTINGS_FORMAT.into()));
+  }
+  fs::write(path, serde_json::to_string_pretty(&body)?)?;
+  Ok(())
+}
+
+#[tauri::command]
+fn settings_get(_payload: Option<Value>) -> CommandResult<Value> {
+  read_settings()
+}
+
+#[tauri::command]
+fn settings_save(payload: Value) -> CommandResult<Value> {
+  write_settings(&payload)?;
+  read_settings()
+}
+
+#[tauri::command]
+fn settings_reset(_payload: Option<Value>) -> CommandResult<Value> {
+  let path = settings_path()?;
+  if path.exists() {
+    fs::remove_file(path)?;
+  }
+  read_settings()
 }
 
 fn read_workspace() -> CommandResult<Vec<Value>> {
@@ -338,6 +404,7 @@ fn desktop_ai_url() -> String {
   std::env::var("AI_VALIDATOR_DESKTOP_API_URL")
     .ok()
     .filter(|value| !value.trim().is_empty())
+    .or_else(|| read_settings_value("aiValidatorDesktopApiUrl"))
     .unwrap_or_else(|| DEFAULT_DESKTOP_AI_URL.to_owned())
 }
 
@@ -345,6 +412,7 @@ fn desktop_wallet_url() -> String {
   std::env::var("AI_VALIDATOR_DESKTOP_WALLET_URL")
     .ok()
     .filter(|value| !value.trim().is_empty())
+    .or_else(|| read_settings_value("aiValidatorDesktopWalletUrl"))
     .unwrap_or_else(|| DEFAULT_DESKTOP_WALLET_URL.to_owned())
 }
 
@@ -353,7 +421,10 @@ fn apply_desktop_headers(builder: reqwest::RequestBuilder) -> CommandResult<reqw
   let builder = builder.header("x-ai-validator-account-id", account_id);
   let builder = match std::env::var("AI_VALIDATOR_DESKTOP_API_KEY") {
     Ok(key) if !key.trim().is_empty() => builder.bearer_auth(key),
-    _ => builder,
+    _ => match read_settings_value("aiValidatorDesktopApiKey") {
+      Some(key) => builder.bearer_auth(key),
+      None => builder,
+    },
   };
   Ok(builder)
 }
@@ -451,6 +522,9 @@ pub fn run() {
       project_import,
       project_restore_workspace,
       project_erase_all,
+      settings_get,
+      settings_save,
+      settings_reset,
       billing_get_balance,
       billing_top_up,
       ai_angles,
