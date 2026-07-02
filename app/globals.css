@@ -1,26 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #050507;
+  --foreground: #f4f4f5;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, .font-title {
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Glow Keyframe Animations */
+@keyframes float {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.15); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+@keyframes floatReverse {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(-40px, 30px) scale(0.9); }
+  66% { transform: translate(30px, -20px) scale(1.2); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-float-slow {
+  animation: float 25s infinite ease-in-out;
+}
+
+.animate-float-reverse-slow {
+  animation: floatReverse 22s infinite ease-in-out;
+}
+
+.leaflet-container {
+  background: #18181b;
+  font-family: inherit;
+}
+
+.leaflet-container img.leaflet-tile,
+.leaflet-container .leaflet-marker-icon,
+.leaflet-container .leaflet-marker-shadow {
+  max-width: none !important;
+}
+
+.ai-area-map {
+  min-height: 18rem;
+  isolation: isolate;
+}
+
+.ai-area-map .leaflet-tile-pane {
+  z-index: 200;
+}
+
+.ai-area-map .leaflet-tile {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.ai-area-map-drawing {
+  cursor: crosshair !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(24, 24, 27, 0.78) !important;
+  color: #a1a1aa !important;
+}
+
+.leaflet-control-attribution a {
+  color: #c4b5fd !important;
 }
