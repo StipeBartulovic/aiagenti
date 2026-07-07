@@ -29,10 +29,11 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'none'",
               "object-src 'none'",
               "img-src 'self' data: blob: https:",
-              "font-src 'self' data:",
-              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self' data: https://fonts.gstatic.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "connect-src 'self' https:",
+              "manifest-src 'self' https://vercel.com https://*.vercel.com",
             ].join('; '),
           },
           ...(process.env.NODE_ENV === "production"

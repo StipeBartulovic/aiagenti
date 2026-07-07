@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, addSimulatedPurchase, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
-import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import type { IdeaFormData, SegmentSpec } from '@/lib/types';
 
 export default function Home() {
@@ -21,14 +21,6 @@ export default function Home() {
   const [loadingAudiences, setLoadingAudiences] = useState(false);
   const [error, setError] = useState('');
   const [mockTab, setMockTab] = useState<'summary' | 'objections' | 'questions'>('summary');
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    stats: false,
-    preview: false,
-    steps: false,
-    workspace: false,
-    pricing: false,
-    testimonials: false,
-  });
   const [hasStoredReport, setHasStoredReport] = useState(() =>
     typeof window !== 'undefined' ? Boolean(window.sessionStorage.getItem('aivalidator_report')) : false
   );
@@ -120,15 +112,6 @@ export default function Home() {
     setCandidates(null);
     setPendingForm(null);
   };
-
-  const toggleSection = (sectionId: string) => {
-    setExpandedSections((current) => ({
-      ...current,
-      [sectionId]: !current[sectionId],
-    }));
-  };
-
-  const isSectionExpanded = (sectionId: string) => expandedSections[sectionId] ?? false;
 
   const t = {
     hr: {
@@ -242,9 +225,6 @@ export default function Home() {
       editIdea: 'Edit idea',
     }
   }[language];
-
-  const showLabel = language === 'en' ? 'Show' : 'Prikaži';
-  const hideLabel = language === 'en' ? 'Hide' : 'Sakrij';
 
   if (authLoading) {
     return (
@@ -431,21 +411,11 @@ export default function Home() {
         )}
 
         <section className="mt-10 w-full max-w-4xl space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
+          <div>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.workspaceTitle}</h2>
             <p className="mt-1 text-sm leading-relaxed text-zinc-500">{t.workspaceSubtitle}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleSection('workspace')}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
-            >
-              {isSectionExpanded('workspace') ? hideLabel : showLabel}
-              {isSectionExpanded('workspace') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
           </div>
-          <div className={`${isSectionExpanded('workspace') ? 'grid' : 'hidden'} gap-4 lg:grid-cols-[1.05fr_0.95fr]`}>
+          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
             <TokenWallet language={language} />
             <SetupStatus language={language} onOpenSettings={() => router.push('/settings')} />
           </div>
@@ -453,21 +423,11 @@ export default function Home() {
 
         {/* Stats Counter Section */}
         <section className="mt-20 w-full max-w-4xl rounded-2xl border border-zinc-900 bg-zinc-950/40 p-5 backdrop-blur-sm sm:p-8">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.howItWorks}</h2>
-              <p className="mt-1 text-sm text-zinc-500">{language === 'en' ? 'The shortest path from rough idea to the first real test.' : 'Najkraci put od sirove ideje do prvog stvarnog testa.'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleSection('stats')}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
-            >
-              {isSectionExpanded('stats') ? hideLabel : showLabel}
-              {isSectionExpanded('stats') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.howItWorks}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{language === 'en' ? 'The shortest path from rough idea to the first real test.' : 'Najkraci put od sirove ideje do prvog stvarnog testa.'}</p>
           </div>
-          <div className={`${isSectionExpanded('stats') ? 'grid' : 'hidden'} mt-5 gap-6 text-center sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:gap-8 sm:divide-zinc-800/50`}>
+          <div className="mt-5 grid gap-6 text-center sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:gap-8 sm:divide-zinc-800/50">
             {t.stats.map(({ value, label }) => (
               <div key={label} className="border-b border-zinc-800/50 pb-5 last:border-b-0 last:pb-0 sm:border-b-0 sm:pb-0">
                 <div className="font-title text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{value}</div>
@@ -479,22 +439,12 @@ export default function Home() {
 
         {/* Interactive Live Preview Mockup Dashboard */}
         <section className="mt-20 max-w-3xl w-full">
-          <div className="mb-6 flex items-start justify-between gap-3 text-left sm:block sm:text-center">
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-wide">{t.previewTitle}</h2>
-              <p className="mt-1 text-sm text-zinc-500">{t.previewSubtitle}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleSection('preview')}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
-            >
-              {isSectionExpanded('preview') ? hideLabel : showLabel}
-              {isSectionExpanded('preview') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
+          <div className="mb-6 text-left sm:text-center">
+            <h2 className="text-xl font-bold text-white tracking-wide">{t.previewTitle}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t.previewSubtitle}</p>
           </div>
           
-          <div className={`${isSectionExpanded('preview') ? 'block' : 'hidden'} relative w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 shadow-2xl backdrop-blur-md sm:p-6`}>
+          <div className="relative w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 shadow-2xl backdrop-blur-md sm:p-6">
             {/* Glossy top strip */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-zinc-800 pb-4 mb-4 gap-2">
               <div>
@@ -576,22 +526,12 @@ export default function Home() {
 
         {/* Pricing Plans Grid Section */}
         <section className="mt-24 max-w-4xl w-full">
-          <div className="mb-8 flex items-start justify-between gap-3 text-left sm:mb-10 sm:block sm:text-center">
-            <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">{t.pricingTitle}</h2>
-              <p className="mt-2 max-w-md text-sm text-zinc-500 sm:mx-auto">{t.pricingSubtitle}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleSection('pricing')}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
-            >
-              {isSectionExpanded('pricing') ? hideLabel : showLabel}
-              {isSectionExpanded('pricing') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
+          <div className="mb-8 text-left sm:mb-10 sm:text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">{t.pricingTitle}</h2>
+            <p className="mt-2 max-w-md text-sm text-zinc-500 sm:mx-auto">{t.pricingSubtitle}</p>
           </div>
           
-          <div className={`${isSectionExpanded('pricing') ? 'grid' : 'hidden'} gap-6 items-stretch md:grid-cols-3`}>
+          <div className="grid gap-6 items-stretch md:grid-cols-3">
             {t.pricingPlans.map((plan) => (
               <div 
                 key={plan.name} 
@@ -647,22 +587,12 @@ export default function Home() {
 
         {/* Founder Testimonials */}
         <section className="mt-24 max-w-3xl w-full">
-          <div className="mb-8 flex items-start justify-between gap-3 text-left sm:mb-10 sm:block sm:text-center">
-            <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white">{t.testimonialsTitle}</h2>
-              <p className="mt-2 text-sm text-zinc-500">{t.testimonialsSubtitle}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleSection('testimonials')}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
-            >
-              {isSectionExpanded('testimonials') ? hideLabel : showLabel}
-              {isSectionExpanded('testimonials') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
+          <div className="mb-8 text-left sm:mb-10 sm:text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-white">{t.testimonialsTitle}</h2>
+            <p className="mt-2 text-sm text-zinc-500">{t.testimonialsSubtitle}</p>
           </div>
           
-          <div className={`${isSectionExpanded('testimonials') ? 'grid' : 'hidden'} gap-6 md:grid-cols-2`}>
+          <div className="grid gap-6 md:grid-cols-2">
             {t.testimonials.map(({ quote, author }) => (
               <div key={author} className="rounded-xl border border-zinc-800 bg-zinc-900/10 p-6 flex flex-col justify-between backdrop-blur-sm relative">
                 <span className="absolute top-4 right-4 text-4xl text-zinc-800 font-serif leading-none pointer-events-none">&ldquo;</span>
@@ -679,21 +609,11 @@ export default function Home() {
 
         {/* Social proof / How it works */}
         <div className="mt-24 max-w-2xl w-full">
-          <div className="mb-8 flex items-start justify-between gap-3 text-left sm:block sm:text-center">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-zinc-500">{t.howItWorks}</p>
-              <p className="mt-2 text-sm text-zinc-500">{language === 'en' ? 'A simple path from idea to action.' : 'Jednostavan put od ideje do konkretnog poteza.'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => toggleSection('steps')}
-              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
-            >
-              {isSectionExpanded('steps') ? hideLabel : showLabel}
-              {isSectionExpanded('steps') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
+          <div className="mb-8 text-left sm:text-center">
+            <p className="text-xs uppercase tracking-widest text-zinc-500">{t.howItWorks}</p>
+            <p className="mt-2 text-sm text-zinc-500">{language === 'en' ? 'A simple path from idea to action.' : 'Jednostavan put od ideje do konkretnog poteza.'}</p>
           </div>
-          <div className={`${isSectionExpanded('steps') ? 'grid' : 'hidden'} gap-6 md:grid-cols-3`}>
+          <div className="grid gap-6 md:grid-cols-3">
             {t.steps.map(({ title, desc }, index) => (
               <div key={title} className="text-center space-y-2">
                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-indigo-400 font-bold mx-auto shadow-inner">
