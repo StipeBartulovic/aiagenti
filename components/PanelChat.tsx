@@ -28,6 +28,10 @@ interface Props {
 const CHIP_THRESHOLD = 0.45; // donji prag da se "ostali" prikažu kao opcionalni chipovi
 const MAX_SUGGESTIONS = 2;
 const OPENER: AgentId = 'business';
+const PRIMARY_ADVISOR_MODES = [
+  { key: 'research', agentId: 'sales' as AgentId },
+  { key: 'positioning', agentId: 'marketing' as AgentId },
+] as const;
 
 // Poruka koja TRAŽI odgovor (pitanje/zahtjev za mišljenjem) ili je očito sadržajna
 const REQUEST_HINTS = /\?|što misli|sto misli|što kaže|sto kaze|ima li (t)?ko|recite|reci |mišljenj|misljenj|savjet|predlož|predloz|what do you|thoughts|advice|feedback|should i|helo|hello|hej|tu si|dal smo tu|are you there|ping/i;
@@ -63,6 +67,7 @@ export default function PanelChat({
   const [kbUpdating, setKbUpdating] = useState(false);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'chat' | 'plan'>('chat');
+  const [mobileView, setMobileView] = useState<'chat' | 'plan' | 'tasks'>('chat');
   const [deepMode, setDeepMode] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -73,6 +78,13 @@ export default function PanelChat({
     hr: {
       placeholder: 'Napiši što razmišljaš...  ( / da pozoveš određenog savjetnika )',
       slashHint: 'Pozovi savjetnika da se javi',
+      primaryModesTitle: 'Kreni od ovoga',
+      primaryModesHelp: 'Za MVP koristi ova 2 smjera. Ostale savjetnike pozovi samo ako zapnes na pravnom, tehnickom ili sirem biznis pitanju.',
+      primaryResearch: 'Research savjetnik',
+      primaryResearchHint: 'Interview pitanja, koga pitati i kako doci do prvog stvarnog signala.',
+      primaryPositioning: 'Positioning savjetnik',
+      primaryPositioningHint: 'Pitch, headline, prva poruka i koji kanal prvo testirati.',
+      rosterHint: 'Ostali specijalisti su i dalje dostupni po potrebi.',
       send: 'Pošalji',
       updating: 'Ažuriram biznis plan...',
       listening: 'slušaju te',
@@ -98,6 +110,13 @@ export default function PanelChat({
     en: {
       placeholder: "Type what you're thinking...  ( / to call a specific advisor )",
       slashHint: 'Call an advisor to weigh in',
+      primaryModesTitle: 'Start here',
+      primaryModesHelp: 'For the MVP, start with these 2 paths. Bring in the other specialists only when you hit a legal, technical, or broader business blocker.',
+      primaryResearch: 'Research advisor',
+      primaryResearchHint: 'Interview questions, who to ask, and how to get a first real-world signal.',
+      primaryPositioning: 'Positioning advisor',
+      primaryPositioningHint: 'Pitch, headline, first outreach message, and which channel to test first.',
+      rosterHint: 'Other specialists are still available when needed.',
       send: 'Send',
       updating: 'Updating business plan...',
       listening: 'listening',
@@ -423,17 +442,30 @@ export default function PanelChat({
   const openTasks = tasks.filter((task) => task.status === 'open');
   const doneTasks = tasks.filter((task) => task.status === 'done');
   const sortedTasks = [...openTasks, ...doneTasks];
+  const showMainPanel = mobileView !== 'tasks';
+  const showTasksPanel = mobileView === 'tasks';
+
+  const activateChat = () => {
+    setTab('chat');
+    setMobileView('chat');
+  };
+
+  const activatePlan = () => {
+    setTab('plan');
+    setMobileView('plan');
+  };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-8rem)] max-w-6xl mx-auto w-full">
-      <div className="flex flex-col flex-1 min-w-0">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
+      <div className={`${showMainPanel ? 'flex' : 'hidden'} min-h-[65vh] min-w-0 flex-1 flex-col rounded-[1.8rem] border border-zinc-800/80 bg-zinc-900/35 p-3 shadow-[0_24px_60px_rgba(0,0,0,0.18)] lg:flex lg:min-h-0`}>
       {/* Header / roster */}
-      <div className="flex items-center gap-3 pb-3 border-b border-zinc-800">
+      <div className="border-b border-zinc-800/80 pb-4">
+        <div className="flex flex-wrap items-start gap-3">
         <div className="flex -space-x-2 flex-shrink-0">
           {AGENT_ORDER.map((id) => (
             <div
               key={id}
-              className={`w-9 h-9 rounded-full ${AGENTS[id].accent.bg} border-2 border-zinc-950 flex items-center justify-center text-base`}
+              className={`flex h-9 w-9 items-center justify-center rounded-full ${AGENTS[id].accent.bg} border-2 border-zinc-950 text-base shadow-lg shadow-black/10`}
               title={`${AGENTS[id].name} · ${AGENTS[id].title[language]}`}
             >
               {AGENTS[id].emoji}
@@ -442,7 +474,7 @@ export default function PanelChat({
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm leading-tight">{t.panelTitle}</p>
-          <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+          <p className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             {AGENT_ORDER.map((id) => AGENTS[id].name).join(', ')} · {t.listening}
           </p>
@@ -459,20 +491,102 @@ export default function PanelChat({
             {t.tasksCreating}
           </span>
         )}
-        <div className="flex bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 flex-shrink-0">
+        <div className="hidden flex-shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/80 p-0.5 lg:flex">
           <button
-            onClick={() => setTab('chat')}
-            className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${tab === 'chat' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+            onClick={activateChat}
+            className={`rounded-lg px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors ${tab === 'chat' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
           >
             {t.tabChat}
           </button>
           <button
-            onClick={() => setTab('plan')}
-            className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors ${tab === 'plan' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+            onClick={activatePlan}
+            className={`rounded-lg px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors ${tab === 'plan' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
           >
             {t.tabPlan}
           </button>
         </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {PRIMARY_ADVISOR_MODES.map((mode) => {
+            const agent = AGENTS[mode.agentId];
+            const title = mode.key === 'research' ? t.primaryResearch : t.primaryPositioning;
+            const hint = mode.key === 'research' ? t.primaryResearchHint : t.primaryPositioningHint;
+            return (
+              <button
+                key={mode.key}
+                type="button"
+                onClick={() => handleForce(mode.agentId)}
+                disabled={busy}
+                className="rounded-[1.4rem] border border-zinc-800 bg-zinc-950/55 p-4 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_12px_30px_rgba(0,0,0,0.10)]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${agent.accent.bg} text-base shadow-lg shadow-black/10`}>
+                    {agent.emoji}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">{title}</p>
+                    <p className={`mt-0.5 text-xs font-medium ${agent.accent.text}`}>{agent.name} · {agent.title[language]}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">{hint}</p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
+          <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+          <span className="font-medium text-zinc-400">{t.primaryModesTitle}</span>
+          <span>{t.primaryModesHelp}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
+          <span>{t.rosterHint}</span>
+          <div className="flex -space-x-2">
+            {AGENT_ORDER.map((id) => (
+              <div
+                key={`secondary-${id}`}
+                className={`h-7 w-7 rounded-full ${AGENTS[id].accent.bg} border-2 border-zinc-950 flex items-center justify-center text-xs`}
+                title={`${AGENTS[id].name} · ${AGENTS[id].title[language]}`}
+              >
+                {AGENTS[id].emoji}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      </div>
+      <div className="sticky top-0 z-10 mt-3 grid grid-cols-3 gap-2 bg-zinc-900/95 pb-1 pt-1 backdrop-blur lg:hidden">
+        <button
+          type="button"
+          onClick={activateChat}
+          className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+            mobileView === 'chat'
+              ? 'border-indigo-500 bg-indigo-600 text-white'
+              : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+          }`}
+        >
+          {t.tabChat}
+        </button>
+        <button
+          type="button"
+          onClick={activatePlan}
+          className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+            mobileView === 'plan'
+              ? 'border-indigo-500 bg-indigo-600 text-white'
+              : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+          }`}
+        >
+          {t.tabPlan}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView('tasks')}
+          className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+            mobileView === 'tasks'
+              ? 'border-indigo-500 bg-indigo-600 text-white'
+              : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+          }`}
+        >
+          {t.tasksTitle}
+        </button>
       </div>
 
       {tab === 'plan' ? (
@@ -498,20 +612,20 @@ export default function PanelChat({
                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {speaker && (
                     <div
-                      className={`w-8 h-8 rounded-full ${speaker.accent.bg} flex items-center justify-center text-sm flex-shrink-0 mr-2 mt-0.5`}
+                      className={`mr-2 mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${speaker.accent.bg} text-sm shadow-lg shadow-black/10`}
                       title={speaker.name}
                     >
                       {speaker.emoji}
                     </div>
                   )}
-                  <div className="max-w-[80%]">
+                  <div className="max-w-[92%] sm:max-w-[82%]">
                     {speaker && (
                       <p className={`text-xs font-medium ${speaker.accent.text} mb-1 ml-1`}>
                         {speaker.name} <span className="text-zinc-600 font-normal">· {speaker.title[language]}</span>
                       </p>
                     )}
                     <div
-                      className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                      className={`rounded-[1.4rem] px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap shadow-[0_8px_24px_rgba(0,0,0,0.08)] ${
                         m.role === 'user'
                           ? 'bg-indigo-600 text-white rounded-br-sm'
                           : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
@@ -525,7 +639,7 @@ export default function PanelChat({
                       </div>
                     )}
                     {m.research && (
-                      <div className={`mt-1.5 ml-1 rounded-xl border px-3 py-2 ${
+                      <div className={`mt-1.5 ml-1 rounded-2xl border px-3 py-2 ${
                         m.research.used
                           ? 'border-emerald-900/60 bg-emerald-950/20'
                           : 'border-amber-900/60 bg-amber-950/20'
@@ -550,7 +664,7 @@ export default function PanelChat({
                       </div>
                     )}
                     {m.sources && m.sources.length > 0 && (
-                      <div className="mt-1.5 ml-1 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2">
+                      <div className="mt-1.5 ml-1 rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2">
                         <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5 flex items-center gap-1">
                           🔍 {language === 'en' ? 'Researched on the web' : 'Istraženo na webu'}
                         </p>
@@ -581,7 +695,7 @@ export default function PanelChat({
                 <div className={`w-8 h-8 rounded-full ${AGENTS[thinkingAgent].accent.bg} flex items-center justify-center text-sm flex-shrink-0 mr-2`}>
                   {AGENTS[thinkingAgent].emoji}
                 </div>
-                <div className="bg-zinc-800 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
+                <div className="flex items-center gap-1 rounded-[1.4rem] rounded-bl-sm bg-zinc-800 px-4 py-3">
                   {[0, 1, 2].map((i) => (
                     <span key={i} className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
@@ -602,7 +716,7 @@ export default function PanelChat({
               return (
                 <div
                   key={s.agentId}
-                  className={`flex items-center gap-2 rounded-xl border ${a.accent.border} bg-zinc-900 pl-2 pr-1 py-1.5`}
+                  className={`flex items-center gap-2 rounded-2xl border ${a.accent.border} bg-zinc-900/90 py-1.5 pl-2 pr-1 shadow-[0_10px_24px_rgba(0,0,0,0.10)]`}
                 >
                   <button
                     onClick={() => handleChip(s.agentId)}
@@ -632,9 +746,9 @@ export default function PanelChat({
           </div>
 
           {/* Input + slash */}
-          <div className="pt-3 border-t border-zinc-800 relative mt-2">
+          <div className="sticky bottom-0 relative mt-2 border-t border-zinc-800 bg-zinc-900/95 pt-3 backdrop-blur">
             {slashActive && slashCandidates.length > 0 && (
-              <div className="absolute bottom-full left-0 mb-2 w-72 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-20">
+              <div className="absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl sm:right-auto sm:w-72">
                 <p className="px-3 py-2 text-[10px] uppercase tracking-widest text-zinc-500 border-b border-zinc-800">
                   {t.slashHint}
                 </p>
@@ -657,7 +771,7 @@ export default function PanelChat({
             )}
 
             {error && <p className="text-red-400 text-xs mb-2">{error}</p>}
-            <div className="mb-2 flex flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-2 flex flex-col gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/55 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold text-zinc-200">{t.deepMode}</p>
                 <p className="text-[11px] text-zinc-500">{t.deepModeHint}</p>
@@ -680,7 +794,7 @@ export default function PanelChat({
                 />
               </button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -692,12 +806,12 @@ export default function PanelChat({
                 }}
                 rows={1}
                 placeholder={t.placeholder}
-                className="flex-1 resize-none rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors text-sm max-h-32"
+                className="min-h-[50px] max-h-32 flex-1 resize-none rounded-2xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
               />
               <button
                 onClick={handleSend}
                 disabled={busy || !input.trim()}
-                className="px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-medium text-sm transition-colors cursor-pointer flex-shrink-0"
+                className="h-[50px] rounded-2xl bg-indigo-600 px-5 text-sm font-medium text-white shadow-lg shadow-indigo-950/30 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600 sm:flex-shrink-0"
               >
                 {t.send}
               </button>
@@ -707,8 +821,8 @@ export default function PanelChat({
       )}
       </div>
 
-      <aside className="lg:w-80 flex-shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden min-h-[260px] lg:h-full">
-        <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between gap-3">
+      <aside className={`${showTasksPanel ? 'flex' : 'hidden'} min-h-[65vh] flex-shrink-0 flex-col overflow-hidden rounded-[1.8rem] border border-zinc-800 bg-zinc-900/60 shadow-[0_24px_60px_rgba(0,0,0,0.18)] lg:flex lg:w-80 lg:min-h-0 lg:self-stretch`}>
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-white">{t.tasksTitle}</p>
             <p className="text-xs text-zinc-500">{openTasks.length} open · {doneTasks.length} done</p>
@@ -716,7 +830,7 @@ export default function PanelChat({
           {creatingTask && <span className="w-4 h-4 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />}
         </div>
 
-        <div className="p-3 space-y-3 overflow-y-auto lg:h-[calc(100%-58px)]">
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
           {sortedTasks.length === 0 ? (
             <p className="text-xs text-zinc-500 text-center py-8">{t.tasksEmpty}</p>
           ) : (
@@ -731,7 +845,7 @@ export default function PanelChat({
               return (
                 <div
                   key={task.id}
-                  className={`rounded-lg border p-3 space-y-2 ${task.status === 'done' ? 'border-zinc-800 bg-zinc-950/40 opacity-65' : 'border-zinc-700 bg-zinc-950/60'}`}
+                  className={`rounded-2xl border p-3 space-y-2 shadow-[0_10px_24px_rgba(0,0,0,0.10)] ${task.status === 'done' ? 'border-zinc-800 bg-zinc-950/40 opacity-65' : 'border-zinc-700 bg-zinc-950/60'}`}
                 >
                   <div className="flex items-start gap-2">
                     <button

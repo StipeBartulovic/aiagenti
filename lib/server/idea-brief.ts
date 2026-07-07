@@ -50,29 +50,31 @@ function fallbackResult(brief: string, language: 'hr' | 'en'): IdeaBriefResult {
     target_market: '',
     assumed_customer: '',
     competitors: '',
-    category_label: language === 'en' ? 'Local/service business' : 'Lokalni ili uslužni biznis',
+    category_label: isBusinessService
+      ? language === 'en' ? 'Local/service business' : 'Lokalni ili usluzni biznis'
+      : language === 'en' ? 'Founder SaaS' : 'Founder SaaS',
     guidance:
       language === 'en'
-        ? 'I could not fully classify this automatically, so I prepared practical discovery questions. Fill the parts you know.'
-        : 'Nisam mogao potpuno klasificirati ideju, pa sam pripremio praktična pitanja za discovery. Popuni ono što znaš.',
+        ? 'I could not fully classify this automatically, so I prepared practical discovery questions. For the MVP we assume a founder testing a digital or SaaS idea unless your brief clearly points elsewhere.'
+        : 'Nisam mogao potpuno klasificirati ideju, pa sam pripremio prakticna discovery pitanja. Za MVP pretpostavljamo founder-a koji testira digitalnu ili SaaS ideju, osim ako brief jasno pokazuje nesto drugo.',
     questions: [
       {
         id: 'buyer',
         category: 'buyer',
-        question: language === 'en' ? 'Who buys this most often, and in what situation?' : 'Tko ovo najčešće kupuje i u kojoj situaciji?',
-        placeholder: language === 'en' ? 'Example: homeowners renovating an apartment...' : 'npr. vlasnici stanova koji renoviraju...',
+        question: language === 'en' ? 'Who is the first realistic buyer or user you want to win, and what makes them care now?' : 'Tko je prvi realan kupac ili korisnik kojeg zelis osvojiti i sto ga tjera da mu je ovo bitno bas sada?',
+        placeholder: language === 'en' ? 'Example: solo SaaS founders preparing customer interviews before building...' : 'npr. solo SaaS founderi koji rade customer intervjue prije gradnje...',
       },
       {
         id: 'pain',
         category: 'pain',
-        question: language === 'en' ? 'What problem makes them look for a solution now?' : 'Koji problem ih natjera da baš sada traže rješenje?',
-        placeholder: language === 'en' ? 'Cost, deadline, inconvenience, risk...' : 'Trošak, rok, neugodnost, rizik...',
+        question: language === 'en' ? 'What painful workflow, uncertainty, or missed result makes them search for a solution now?' : 'Koji bolan workflow, nepoznanica ili promaseni rezultat ih tjera da sada traze rjesenje?',
+        placeholder: language === 'en' ? 'Lost time, weak interviews, unclear demand, poor conversion...' : 'Izgubljeno vrijeme, slabi intervjui, nejasna potraznja, losa konverzija...',
       },
       {
         id: 'trust',
         category: 'trust',
-        question: language === 'en' ? 'What must they trust before buying?' : 'Što moraju vjerovati prije kupnje?',
-        placeholder: language === 'en' ? 'Warranty, reviews, proof, certification...' : 'Garancija, recenzije, dokaz, certifikat...',
+        question: language === 'en' ? 'What proof or result would they need before they trust this enough to use or pay for it?' : 'Koji dokaz ili rezultat bi im trebao prije nego dovoljno vjeruju da ovo koriste ili plate?',
+        placeholder: language === 'en' ? 'Case study, real interviews, faster workflow, ROI, saved hours...' : 'Case study, stvarni intervjui, brzi workflow, ROI, usteda sati...',
       },
     ],
   };
@@ -140,7 +142,8 @@ Your job:
 - Classify the likely business model: B2C, B2B, or B2B2C.
 - Infer whether this is a startup/SaaS/fintech/IT product, local service, retail/store, marketplace, agency, physical product, etc.
 - Prepare the rest of the validation form so it fits that business type.
-- Do not force startup language onto ordinary businesses. A window-installation company, hair salon, restaurant, delivery service, or local shop needs different questions than a fintech SaaS.
+- For the MVP, the default lens is a solo founder testing a digital or SaaS idea before MVP. If the brief is ambiguous, prefer that lens.
+- Do not force startup language onto ordinary businesses when the brief is clearly local/service/retail. A window-installation company, hair salon, restaurant, delivery service, or local shop needs different questions than a fintech SaaS.
 - Ask 4-6 specific follow-up questions that would make the validation stronger.
 - If uncertain, leave fields empty rather than inventing facts.
 - Return text in ${langName}.

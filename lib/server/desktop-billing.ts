@@ -189,7 +189,9 @@ export function readDesktopAccountId(headers: Headers): string {
 
 export function verifyDesktopSecret(headers: Headers): void {
   const required = process.env.DESKTOP_AI_SHARED_SECRET;
-  if (!required) return;
+  if (!required) {
+    throw new ServerActionError('Desktop bridge is not configured.', 503, 'desktop_bridge_not_configured');
+  }
 
   const auth = headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '';

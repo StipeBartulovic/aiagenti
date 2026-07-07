@@ -86,7 +86,7 @@ export default function AudiencePicker({ language, segments, onConfirm, onSkip, 
                   ✓
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                     <p className="font-semibold text-white text-sm">{s.label}</p>
                     <span className="text-[10px] text-zinc-500 flex-shrink-0">
                       {s.age_range[0]}–{s.age_range[1]} {t.ageLabel}
@@ -133,18 +133,18 @@ export default function AudiencePicker({ language, segments, onConfirm, onSkip, 
         </button>
         {chosen.length === 0 && <p className="text-center text-xs text-zinc-500 -mt-1">{t.noneHint}</p>}
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={onBack}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            className="self-start text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
           >
             {t.back}
           </button>
           <button
             type="button"
             onClick={onSkip}
-            className="text-xs text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+            className="w-full rounded-lg border border-zinc-800 px-3 py-2 text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white sm:w-auto sm:py-1.5"
           >
             {t.skip}
           </button>

@@ -471,21 +471,21 @@ function ConfidenceCard({ confidence, labels }: ConfidenceCardProps) {
   const missing = confidence?.missing_evidence?.length ? confidence.missing_evidence : [labels.fallbackMissing];
 
   return (
-    <section className={`rounded-2xl border p-6 ${color}`}>
-      <div className="flex flex-col md:flex-row md:items-start gap-5">
-        <div className="md:w-36 flex-shrink-0">
-          <p className="text-xs font-semibold uppercase tracking-widest opacity-80 mb-2">{labels.title}</p>
-          <div className="rounded-xl border border-current/25 bg-black/20 p-4 text-center">
-            <p className="text-4xl font-black text-white">{score}</p>
+    <section className={`rounded-[1.6rem] border p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)] ${color}`}>
+      <div className="flex flex-col gap-5 md:flex-row md:items-start">
+        <div className="flex-shrink-0 md:w-36">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] opacity-80">{labels.title}</p>
+          <div className="rounded-2xl border border-current/25 bg-black/20 p-4 text-center">
+            <p className="text-3xl font-black text-white sm:text-4xl">{score}</p>
             <p className="text-xs text-zinc-400">/100</p>
             <p className="mt-2 text-sm font-bold">{labelText}</p>
           </div>
         </div>
         <div className="flex-1 space-y-4">
           <p className="text-sm text-zinc-300 leading-relaxed">{labels.subtitle}</p>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">{labels.reasons}</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-white/5 bg-black/10 p-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">{labels.reasons}</p>
               <ul className="space-y-1.5">
                 {reasons.slice(0, 4).map((reason, index) => (
                   <li key={`${reason}-${index}`} className="text-sm text-zinc-200 leading-relaxed flex gap-2">
@@ -495,8 +495,8 @@ function ConfidenceCard({ confidence, labels }: ConfidenceCardProps) {
                 ))}
               </ul>
             </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">{labels.missing}</p>
+            <div className="rounded-2xl border border-white/5 bg-black/10 p-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">{labels.missing}</p>
               <ul className="space-y-1.5">
                 {missing.slice(0, 5).map((item, index) => (
                   <li key={`${item}-${index}`} className="text-sm text-zinc-200 leading-relaxed flex gap-2">
@@ -507,6 +507,84 @@ function ConfidenceCard({ confidence, labels }: ConfidenceCardProps) {
               </ul>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+interface NextExperimentCardProps {
+  experiment?: ValidationReport['next_experiment'];
+  labels: {
+    title: string;
+    subtitle: string;
+    hypothesis: string;
+    who: string;
+    where: string;
+    message: string;
+    duration: string;
+    success: string;
+  };
+}
+
+function NextExperimentCard({ experiment, labels }: NextExperimentCardProps) {
+  if (!experiment) return null;
+
+  return (
+    <section className="rounded-[1.6rem] border border-cyan-800/40 bg-cyan-950/10 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        <div className="lg:w-56 lg:flex-shrink-0">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-300/90">{labels.title}</p>
+          <p className="text-sm text-zinc-300 leading-relaxed">{labels.subtitle}</p>
+          <div className="mt-4 rounded-2xl border border-cyan-700/30 bg-black/20 px-4 py-3">
+            <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-cyan-300/80">{labels.duration}</p>
+            <p className="text-sm font-semibold text-white">{experiment.duration}</p>
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">{labels.hypothesis}</p>
+              <p className="text-sm text-zinc-100 leading-relaxed">{experiment.hypothesis}</p>
+            </div>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">{labels.who}</p>
+              <p className="text-sm text-zinc-100 leading-relaxed">{experiment.who_to_test}</p>
+            </div>
+          </div>
+
+          {experiment.where_to_find.length > 0 && (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">{labels.where}</p>
+              <div className="flex flex-wrap gap-2">
+                {experiment.where_to_find.map((item, index) => (
+                  <span key={`${item}-${index}`} className="rounded-full border border-cyan-800/40 bg-cyan-950/20 px-2.5 py-1 text-xs text-cyan-100">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-4">
+            <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-zinc-500">{labels.message}</p>
+            <p className="whitespace-pre-line text-sm text-zinc-100 leading-relaxed">{experiment.outreach_message}</p>
+          </div>
+
+          {experiment.success_criteria.length > 0 && (
+            <div className="rounded-2xl border border-emerald-800/30 bg-emerald-950/10 p-4">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.18em] text-emerald-300/90">{labels.success}</p>
+              <ul className="space-y-1.5">
+                {experiment.success_criteria.map((item, index) => (
+                  <li key={`${item}-${index}`} className="flex gap-2 text-sm text-zinc-100 leading-relaxed">
+                    <span className="text-emerald-400">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -715,7 +793,7 @@ function PricingSection({ report, form, language, onUpdateReport, labels }: Pric
       ) : (
         <div className="space-y-5">
           {/* Summary brojke */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-indigo-800/40 bg-indigo-950/20 p-3 text-center">
               <p className="text-[10px] uppercase tracking-wider text-indigo-400 mb-1">{labels.range}</p>
               <p className="text-sm font-bold text-white">
@@ -1038,7 +1116,7 @@ function StrategySection({ report, form, language, onUpdateReport, labels }: Str
       <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-2">🧭 {labels.title}</h2>
       <p className="text-xs text-zinc-500 mb-4">{labels.subtitle}</p>
 
-      <div className="grid md:grid-cols-4 gap-2 mb-4">
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {(Object.keys(labels.modes) as Array<keyof StrategyLabels['modes']>).map((key) => (
           <button
             key={key}
@@ -1086,7 +1164,7 @@ function StrategySection({ report, form, language, onUpdateReport, labels }: Str
             <p className="text-sm text-zinc-200 leading-relaxed">{strategy.strategic_read}</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-emerald-900/40 bg-emerald-950/10 p-4">
               <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wide mb-2">{labels.doNow}</p>
               <ul className="space-y-1.5">
@@ -1234,7 +1312,7 @@ function ResearchSection({ report, form, language, onUpdateReport, labels }: Res
       <h2 className="text-xl font-black text-cyan-100 tracking-normal md:text-2xl mb-2">{labels.title}</h2>
       <p className="text-xs text-zinc-500 mb-4">{labels.subtitle}</p>
 
-      <div className="grid md:grid-cols-3 gap-2 mb-4">
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {presets.map((angle) => {
           const Icon = researchIcons[angle] ?? Search;
           const isLoading = loadingAngle === angle;
@@ -1392,10 +1470,7 @@ const commandIcons: Record<CommandTool, LucideIcon> = {
 
 const allCommandTools: CommandTool[] = [
   'strategy',
-  'research_grants',
-  'research_funding',
   'research_competitors',
-  'research_local_growth',
   'pricing',
   'interview',
   'conversion',
@@ -1439,7 +1514,6 @@ function getCommandRecommendations(
   form: IdeaFormData | null | undefined,
   language: 'hr' | 'en'
 ): CommandRecommendation[] {
-  const { startupish, localish } = businessSignals(form);
   const hasResearch = (angle: ResearchAngle) => report.research_reports?.some((item) => item.angle === angle);
   const confidenceScore = report.confidence?.score ?? 45;
   const hasMissingEvidence = (report.confidence?.missing_evidence?.length ?? 0) > 0;
@@ -1451,10 +1525,7 @@ function getCommandRecommendations(
   const reason = {
     hr: {
       strategy: report.strategy ? 'Strategija već postoji, ali možeš je osvježiti za novi sprint.' : 'Treba jasan sljedeći sprint iz trenutnih nalaza.',
-      grants: hasResearch('grants') ? 'Poticaji su već istraženi, korisno za provjeru novih programa.' : 'Vrijedi provjeriti poticaje jer mogu promijeniti plan financiranja.',
-      funding: hasResearch('funding') ? 'Funding put je već mapiran, možeš ga nadopuniti novim upitom.' : 'Startup signal je jak, pa treba provjeriti realan put do kapitala.',
       competitors: hasResearch('competitors') ? 'Konkurencija je već istražena, ali može se suziti po tržištu.' : 'Fali stvarni pogled na alternative i tržišne praznine.',
-      localGrowth: hasResearch('local_growth') ? 'Lokalni rast je već istražen, možeš provjeriti drugu zonu.' : 'Ovo izgleda kao lokalni/proizvodni rast gdje je zona i kapacitet bitan.',
       pricing: report.pricing ? 'Cijena je već analizirana, ali možeš je ponoviti nakon promjene ponude.' : 'Cijena je jedna od najbržih stvari za testirati prije prodaje.',
       interview: report.interview ? 'Intervju kit već postoji, sljedeće ga možeš doraditi po segmentu.' : 'Confidence traži stvarne razgovore, ne još samo sintetičke signale.',
       conversion: report.conversion ? 'Plan preokreta već postoji, možeš ga osvježiti nakon novih odgovora.' : 'Visok otpor znači da treba maknuti najveće prigovore.',
@@ -1462,10 +1533,7 @@ function getCommandRecommendations(
     },
     en: {
       strategy: report.strategy ? 'Strategy exists, but it can be refreshed for the next sprint.' : 'The current findings need a clear next sprint.',
-      grants: hasResearch('grants') ? 'Grants were already researched, useful for checking new programs.' : 'Grants could change the financing path, so they are worth checking.',
-      funding: hasResearch('funding') ? 'Funding path is mapped, but you can refine it with a narrower query.' : 'Startup signal is strong, so the realistic path to capital matters.',
       competitors: hasResearch('competitors') ? 'Competitors were researched, but this can be narrowed by market.' : 'Real alternatives and market gaps are still missing.',
-      localGrowth: hasResearch('local_growth') ? 'Local growth was researched, try another zone or channel.' : 'This looks like local/product growth where zone and capacity matter.',
       pricing: report.pricing ? 'Pricing exists, but rerun it after an offer change.' : 'Pricing is one of the fastest things to test before selling.',
       interview: report.interview ? 'Interview kit exists, refine it by segment next.' : 'Confidence needs real conversations, not only synthetic signals.',
       conversion: report.conversion ? 'Conversion plan exists, refresh it after new answers.' : 'High resistance means the biggest objections need to be removed.',
@@ -1480,9 +1548,6 @@ function getCommandRecommendations(
     { tool: 'interview', score: 38 + (report.interview ? -18 : 16) + (confidenceScore < 60 ? 12 : 0) + (hasMissingEvidence ? 8 : 0) + (manyQuestions ? 8 : 0), reason: reason.interview },
     { tool: 'conversion', score: 36 + (report.conversion ? -16 : 16) + (rejectionIsHigh ? 18 : 0), reason: reason.conversion },
     { tool: 'angles', score: 28 + (report.angles ? -16 : 12) + (hasClusters ? 10 : 0) + (report.score >= 35 ? 6 : 0), reason: reason.angles },
-    { tool: 'research_grants', score: 26 + (hasResearch('grants') ? -14 : 14) + (startupish || localish ? 12 : 0), reason: reason.grants },
-    { tool: 'research_funding', score: 22 + (hasResearch('funding') ? -16 : 16) + (startupish ? 24 : -8), reason: reason.funding },
-    { tool: 'research_local_growth', score: 22 + (hasResearch('local_growth') ? -16 : 16) + (localish ? 26 : -6), reason: reason.localGrowth },
   ];
 
   return candidates
@@ -1629,7 +1694,7 @@ function CommandCenter({ report, form, language, showToolShelf, setShowToolShelf
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
             <p className="text-[10px] uppercase tracking-widest text-zinc-500">{labels.quickStart}</p>
-            <p className="mt-2 text-4xl font-black text-white">
+            <p className="mt-2 text-3xl font-black text-white sm:text-4xl">
               {report.score}<span className="text-base text-zinc-500">/100</span>
             </p>
             <p className="mt-1 text-xs text-zinc-500">{labels.recommended}</p>
@@ -1687,7 +1752,7 @@ function CommandCenter({ report, form, language, showToolShelf, setShowToolShelf
             </button>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visibleTools.map((tool, index) => {
               const Icon = commandIcons[tool];
               const isLoading = loadingTool === tool;
@@ -2181,6 +2246,9 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
   const t = {
     hr: {
       disclaimer: 'Simulirani odgovori AI persona, ne pravi korisnici. Koristi kao smjernicu, ne kao dokaz.',
+      validationLevelLabel: 'Validation level',
+      validationLevelValue: 'Simulated benchmark',
+      validationLevelHelp: 'Signal, ne dokaz. Pravi razgovori i prava kupnja su sljedeci nivo validacije.',
       simulatedBuyers: 'simuliranih kupaca',
       segmentsTitle: 'Usporedba publika',
       segmentsSubtitle: 'Kako je ista ideja prošla kod svake ciljane publike — odmah vidiš gdje proizvod najbolje rezonira.',
@@ -2255,16 +2323,16 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
         local_growth: { title: 'Lokalni rast', desc: 'Širenje usluge/proizvoda po zonama, kanalima i kapacitetu.' },
         custom: { title: 'Custom', desc: 'Tvoj vlastiti research upit.' },
       },
-      commandTitle: 'Command Center',
-      commandSubtitle: 'Napiši cilj normalnim jezikom. Ako znaš što želiš, pokreni direktno; ako ne znaš, kreni od prve preporuke.',
+      commandTitle: 'Pomoc za sljedeci potez',
+      commandSubtitle: 'Napiši što želiš provjeriti i dobit ces najkorisniji sljedeci korak.',
       commandPrimaryHint: 'Što želiš napraviti sljedeće?',
-      commandQuickStart: 'Trenutno stanje',
-      commandRecommended: 'Preporučeni sljedeći potezi',
-      commandRecommendedHelp: 'AI bira najkorisnije alate za ovaj izvještaj. Kreni od prvog ako nisi siguran.',
-      commandAllTools: 'Svi alati',
-      commandAllToolsHelp: 'Cijeli katalog alata. Odaberi direktno ili upiši cilj gore pa ćemo odabrati alat za tebe.',
+      commandQuickStart: 'Kreni odavde',
+      commandRecommended: 'Najkorisnije sada',
+      commandRecommendedHelp: 'Kreni od prvog prijedloga ako nisi siguran što dalje.',
+      commandAllTools: 'Sve analize',
+      commandAllToolsHelp: 'Ako želiš dublje kopati, ovdje su ostale analize.',
       commandRecentResult: 'Zadnje pokrenuto',
-      commandInputPlaceholder: 'npr. nađi mi poticaje, pripremi VC put, napravi plan lokalnog širenja...',
+      commandInputPlaceholder: 'npr. nadi konkurente, slozi pitanja za intervjue, procijeni cijenu...',
       commandRun: 'Pokreni',
       commandRunning: 'Radim...',
       commandNeedData: 'Treba postojati ideja i report da bi command center mogao pokretati alate.',
@@ -2329,7 +2397,7 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       conjointSample: 'Uzorak',
       conjointError: 'Greška pri conjoint analizi. Pokušaj ponovno.',
       deeperTitle: 'Dublje analize',
-      deeperSubtitle: 'Dodatni AI alati — pokreni po potrebi.',
+      deeperSubtitle: 'Opcionalno, nakon prvog signala i prvog testa.',
       scorePromising: 'Obećavajuće',
       scoreMixed: 'Miješano',
       scoreChallenging: 'Izazovno',
@@ -2350,20 +2418,28 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       radarBudget: 'Budžet',
       radarTime: 'Ušteda vremena',
       radarRisk: 'Tolerancija rizika',
-      primaryAudience: 'Primarna publika',
-      assumptionVsReality: 'Pretpostavka vs stvarnost',
-      topReasons: 'Top razlozi ZA kupnju',
-      primaryBuyerProfile: 'Profil primarnog kupca',
+      primaryAudience: 'Tko najvise reagira',
+      assumptionVsReality: 'Gdje si bio u pravu, a gdje promasio',
+      topReasons: 'Sto ih vuce',
+      primaryBuyerProfile: 'Profil tog kupca',
       objectionShare: 'Udio',
       skepticsVoices: 'Glasovi skeptika',
-      discoveryBoardTitle: '❓ Pitanja koja tržište treba razjasniti',
-      discoveryBoardSubtitle: 'Ovo nisu nova analiza ni anketa za ponovno pokretanje. Ovo su konkretna pitanja iz reakcija persona: što im nije jasno, zašto bi koristili proizvod i što ih blokira.',
+      discoveryBoardTitle: '❓ Sto jos moras razjasniti',
+      discoveryBoardSubtitle: 'Otvorena pitanja koja treba potvrditi kroz stvarne razgovore i testove.',
       discoveryPayer: 'Biznisi / platiše',
       discoveryUser: 'Korisnici / potražnja',
       discoveryGeneral: 'Opća pitanja',
       discoveryContext: 'Kontekst',
       discoveryEmpty: 'Nema dovoljno pitanja u ovom izvještaju. Pokreni noviju analizu s personama.',
-      actionPlan: '✅ Akcijski plan',
+      nextExperimentTitle: '🚀 Sljedeci 7-dnevni test',
+      nextExperimentSubtitle: 'Jedan konkretan test koji mozes pokrenuti odmah.',
+      nextExperimentHypothesis: 'Sto provjeravas',
+      nextExperimentWho: 'Koga testirati prvo',
+      nextExperimentWhere: 'Gdje ih naci',
+      nextExperimentMessage: 'Gotova poruka',
+      nextExperimentDuration: 'Trajanje',
+      nextExperimentSuccess: 'Kriterij uspjeha',
+      actionPlan: '✅ Sto promijeniti sada',
       product: 'Proizvod',
       marketing: 'Marketing',
       pricing: 'Cijena',
@@ -2382,13 +2458,13 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       marketSideUserTitle: 'Korisnici / potražnja',
       marketSideUserDesc: 'Ova strana procjenjuje korisnost, naviku korištenja, povjerenje i privlačnost iskustva.',
       sideTopReasons: 'Glavni razlozi',
-      sectionOpportunity: '🎯 Prilika (Opportunity Score)',
+      sectionOpportunity: '🎯 Snaga problema',
       oppImportance: 'Važnost problema',
       oppSatisfaction: 'Zadovoljstvo postojećim',
       oppUnmet: 'Najveće neispunjene potrebe',
       oppAlternatives: 'Što kupci koriste danas (prava konkurencija)',
       oppPeople: 'kupaca',
-      sectionClusters: '🧩 Prirodne skupine (iz podataka)',
+      sectionClusters: '🧩 Skupine kupaca',
       clustersIntro1: 'Od',
       clustersIntro2: 'agenata izdvojilo se',
       clustersIntro3: 'prirodnih skupina (algoritamski iz odgovora, ne unaprijed)',
@@ -2396,10 +2472,10 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       clMainProblem: 'Glavni problem',
       clMainObjection: 'Glavni prigovor',
       clOfBuyers: 'kupaca',
-      sectionAudience: '👥 Ciljna skupina',
-      sectionRejection: '🧱 Zid odbijanja',
-      personaBrowser: '👤 Detaljni pregled persona',
-      personaBrowserSubtitle: 'Pregledaj profile i individualna mišljenja svih simuliranih kupaca koji su sudjelovali u analizi kao dokaz autentičnosti.',
+      sectionAudience: '👥 Tko najvise reagira',
+      sectionRejection: '🧱 Zasto odbijaju',
+      personaBrowser: '👤 Svi odgovori persona',
+      personaBrowserSubtitle: 'Sirovi odgovori svih simuliranih kupaca iz ove analize.',
       filterAll: 'Sve',
       searchPlaceholder: 'Pretraži po ulozi, industriji ili regiji...',
       decisionLabel: 'Odluka',
@@ -2426,6 +2502,9 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
     },
     en: {
       disclaimer: 'Simulated customer persona reactions, not real users. Use as a guideline, not as validation proof.',
+      validationLevelLabel: 'Validation level',
+      validationLevelValue: 'Simulated benchmark',
+      validationLevelHelp: 'A directional signal, not proof. Real conversations and real buying behavior are the next level of validation.',
       simulatedBuyers: 'simulated buyers',
       segmentsTitle: 'Audience comparison',
       segmentsSubtitle: 'How the same idea landed with each target audience — instantly see where the product resonates best.',
@@ -2500,16 +2579,16 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
         local_growth: { title: 'Local growth', desc: 'Expansion by zones, channels, repeat demand, and capacity.' },
         custom: { title: 'Custom', desc: 'Your own research query.' },
       },
-      commandTitle: 'Command Center',
-      commandSubtitle: 'Type a goal in plain language. If you know what you want, run it directly; if not, start with the first recommendation.',
+      commandTitle: 'Next-step help',
+      commandSubtitle: 'Type what you want to check and get the most useful next move.',
       commandPrimaryHint: 'What do you want to do next?',
-      commandQuickStart: 'Current state',
-      commandRecommended: 'Recommended next moves',
-      commandRecommendedHelp: 'AI picks the most useful tools for this report. Start with the first one if you are not sure.',
-      commandAllTools: 'All tools',
-      commandAllToolsHelp: 'The full tool catalog. Pick directly or type a goal above and we will route it for you.',
+      commandQuickStart: 'Start here',
+      commandRecommended: 'Most useful now',
+      commandRecommendedHelp: 'Start with the first suggestion if you are not sure what to do next.',
+      commandAllTools: 'All analyses',
+      commandAllToolsHelp: 'If you want to go deeper, the rest of the analyses live here.',
       commandRecentResult: 'Latest result',
-      commandInputPlaceholder: 'e.g. find grants, prepare VC path, create local expansion plan...',
+      commandInputPlaceholder: 'e.g. find competitors, draft interview questions, estimate pricing...',
       commandRun: 'Run',
       commandRunning: 'Working...',
       commandNeedData: 'An idea and report are required before the command center can run tools.',
@@ -2574,7 +2653,7 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       conjointSample: 'Sample',
       conjointError: 'Error in conjoint analysis. Try again.',
       deeperTitle: 'Deeper analyses',
-      deeperSubtitle: 'Extra AI tools — run on demand.',
+      deeperSubtitle: 'Optional, after you have reviewed the first signal and first test.',
       scorePromising: 'Promising',
       scoreMixed: 'Mixed',
       scoreChallenging: 'Challenging',
@@ -2595,20 +2674,28 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       radarBudget: 'Budget',
       radarTime: 'Time Saving',
       radarRisk: 'Risk Tolerance',
-      primaryAudience: 'Primary Segment',
-      assumptionVsReality: 'Assumption vs Reality',
-      topReasons: 'Top Reasons to Buy',
-      primaryBuyerProfile: 'Primary Buyer Profile',
+      primaryAudience: 'Who reacts the most',
+      assumptionVsReality: 'Where you were right vs wrong',
+      topReasons: 'What pulls them in',
+      primaryBuyerProfile: 'Buyer snapshot',
       objectionShare: 'Share',
       skepticsVoices: 'Voices of Skeptics',
-      discoveryBoardTitle: '❓ Questions the market needs clarified',
-      discoveryBoardSubtitle: 'This is not a new analysis or survey rerun. These are concrete questions from persona reactions: what is unclear, why they would use it, and what blocks them.',
+      discoveryBoardTitle: '❓ What you still need to learn',
+      discoveryBoardSubtitle: 'Open questions to confirm through real conversations and tests.',
       discoveryPayer: 'Businesses / payers',
       discoveryUser: 'Users / demand',
       discoveryGeneral: 'General questions',
       discoveryContext: 'Context',
       discoveryEmpty: 'Not enough questions in this report. Run a newer validation with personas.',
-      actionPlan: '✅ Action Plan',
+      nextExperimentTitle: '🚀 Next 7-day test',
+      nextExperimentSubtitle: 'One concrete test you can run right away.',
+      nextExperimentHypothesis: 'What you are testing',
+      nextExperimentWho: 'Who to test first',
+      nextExperimentWhere: 'Where to find them',
+      nextExperimentMessage: 'Ready-to-send message',
+      nextExperimentDuration: 'Duration',
+      nextExperimentSuccess: 'Success criteria',
+      actionPlan: '✅ What to change now',
       product: 'Product',
       marketing: 'Marketing',
       pricing: 'Pricing',
@@ -2627,13 +2714,13 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       marketSideUserTitle: 'Users / demand',
       marketSideUserDesc: 'This side evaluates usefulness, adoption, trust, and appeal of the experience.',
       sideTopReasons: 'Top reasons',
-      sectionOpportunity: '🎯 Opportunity Score',
+      sectionOpportunity: '🎯 Problem strength',
       oppImportance: 'Problem importance',
       oppSatisfaction: 'Satisfaction with current',
       oppUnmet: 'Biggest unmet needs',
       oppAlternatives: 'What buyers use today (real competition)',
       oppPeople: 'buyers',
-      sectionClusters: '🧩 Natural groups (data-driven)',
+      sectionClusters: '🧩 Buyer groups',
       clustersIntro1: 'From',
       clustersIntro2: 'agents,',
       clustersIntro3: 'natural groups emerged (algorithmically from responses, not pre-defined)',
@@ -2641,10 +2728,10 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       clMainProblem: 'Main problem',
       clMainObjection: 'Main objection',
       clOfBuyers: 'buyers',
-      sectionAudience: '👥 Target Audience',
-      sectionRejection: '🧱 Wall of Rejection',
-      personaBrowser: '👤 Detailed Persona Browser',
-      personaBrowserSubtitle: 'Browse the profiles and individual opinions of all simulated buyers involved in the analysis as proof of authenticity.',
+      sectionAudience: '👥 Who reacts the most',
+      sectionRejection: '🧱 Why they reject it',
+      personaBrowser: '👤 All persona responses',
+      personaBrowserSubtitle: 'Raw responses from every simulated buyer in this analysis.',
       filterAll: 'All',
       searchPlaceholder: 'Search by role, industry, or region...',
       decisionLabel: 'Decision',
@@ -2692,23 +2779,23 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
   const discoveryQuestions = buildDiscoveryQuestions(report, language);
   const sectionTabs = language === 'en'
     ? [
-        { id: 'overview' as const, label: 'Overview', hint: 'Score, summary, command center' },
-        { id: 'audience' as const, label: 'Audience', hint: 'Segments, opportunity, clusters' },
-        { id: 'objections' as const, label: 'Objections', hint: 'Blockers and questions' },
-        { id: 'action' as const, label: 'Action', hint: 'Next moves' },
-        { id: 'deeper' as const, label: 'Tools', hint: 'Research, pricing, strategy' },
+        { id: 'overview' as const, label: 'Overview', hint: 'Score, confidence, first read' },
+        { id: 'action' as const, label: 'Next step', hint: 'Experiment and action plan' },
+        { id: 'objections' as const, label: 'Objections', hint: 'Blockers and open questions' },
+        { id: 'audience' as const, label: 'Audience', hint: 'Who reacts and why' },
+        { id: 'deeper' as const, label: 'Analyses', hint: 'Research, pricing, strategy' },
         { id: 'personas' as const, label: 'Personas', hint: 'Raw synthetic voices' },
       ]
     : [
-        { id: 'overview' as const, label: 'Pregled', hint: 'Score, rezime, command center' },
-        { id: 'audience' as const, label: 'Publika', hint: 'Segmenti, prilika, skupine' },
-        { id: 'objections' as const, label: 'Prepreke', hint: 'Blokade i pitanja' },
-        { id: 'action' as const, label: 'Akcija', hint: 'Sljedeći potezi' },
-        { id: 'deeper' as const, label: 'Alati', hint: 'Research, cijena, strategija' },
+        { id: 'overview' as const, label: 'Pregled', hint: 'Score, confidence, prvi dojam' },
+        { id: 'action' as const, label: 'Sljedeci potez', hint: 'Eksperiment i akcijski plan' },
+        { id: 'objections' as const, label: 'Prepreke', hint: 'Blokade i otvorena pitanja' },
+        { id: 'audience' as const, label: 'Publika', hint: 'Tko reagira i zasto' },
+        { id: 'deeper' as const, label: 'Analize', hint: 'Research, cijena, strategija' },
         { id: 'personas' as const, label: 'Persone', hint: 'Sirovi glasovi publike' },
       ];
-  const desktopSectionClass = (id: typeof activeSection) =>
-    `space-y-6 ${activeSection === id ? 'lg:block' : 'lg:hidden'}`;
+  const sectionClass = (id: typeof activeSection) =>
+    `space-y-6 ${activeSection === id ? 'block' : 'hidden'}`;
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
@@ -2752,19 +2839,51 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       )}
 
       {/* Meta disclaimer */}
-      <div className="rounded-lg bg-zinc-800/50 border border-zinc-700 px-4 py-2 text-xs text-zinc-400 flex items-center gap-2">
+      <div className="flex items-start gap-2 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-4 py-3 text-xs text-zinc-400 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
         <span className="text-yellow-400">⚠</span>
-        {t.disclaimer} · {report.meta.personas_count} {t.simulatedBuyers} · {new Date(report.meta.generated_at).toLocaleString(language === 'en' ? 'en-US' : 'hr-HR')}
+        <span className="leading-relaxed">
+          {t.disclaimer} · {report.meta.personas_count} {t.simulatedBuyers} · {new Date(report.meta.generated_at).toLocaleString(language === 'en' ? 'en-US' : 'hr-HR')}
+        </span>
       </div>
 
-      <nav className="hidden lg:block sticky top-[73px] z-20 rounded-2xl border border-zinc-800 bg-zinc-950/88 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-800/30 bg-cyan-950/10 px-4 py-3 text-sm shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
+        <span className="rounded-full border border-cyan-700/40 bg-cyan-900/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-cyan-200">
+          {t.validationLevelLabel}
+        </span>
+        <span className="font-semibold text-white">{t.validationLevelValue}</span>
+        <span className="text-zinc-400">{t.validationLevelHelp}</span>
+      </div>
+
+      <nav className="sticky top-[73px] z-20 -mx-1 overflow-x-auto px-1 pb-1 lg:hidden">
+        <div className="flex min-w-max gap-2">
+          {sectionTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSection(tab.id)}
+              className={`min-w-[132px] rounded-2xl border px-3 py-3 text-left transition-all ${
+                activeSection === tab.id
+                  ? 'border-indigo-500/70 bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                  : 'border-zinc-800 bg-zinc-900/90 text-zinc-400'
+              }`}
+            >
+              <span className="block text-sm font-black">{tab.label}</span>
+              <span className={`mt-1 block text-[10px] leading-snug ${activeSection === tab.id ? 'text-indigo-100/85' : 'text-zinc-600'}`}>
+                {tab.hint}
+              </span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <nav className="hidden lg:block sticky top-[73px] z-20 rounded-[1.6rem] border border-zinc-800 bg-zinc-950/88 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
         <div className="grid grid-cols-6 gap-2">
           {sectionTabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveSection(tab.id)}
-              className={`rounded-xl border px-3 py-3 text-left transition-all ${
+              className={`rounded-2xl border px-3 py-3 text-left transition-all ${
                 activeSection === tab.id
                   ? 'border-indigo-500/70 bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
                   : 'border-zinc-800 bg-zinc-900/70 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-900 hover:text-white'
@@ -2779,7 +2898,225 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
         </div>
       </nav>
 
-      <div className={desktopSectionClass('overview')}>
+      <div className={sectionClass('overview')}>
+      {/* 1. Executive Summary */}
+      <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
+          {t.sectionSummary}
+        </h2>
+        {marketSideResults.length >= 2 ? (
+          <div className="space-y-5">
+            <div className="flex flex-col md:flex-row gap-4 md:items-start">
+              <div className="flex flex-shrink-0 justify-center md:w-40">
+                <ScoreRing score={report.score} labelTranslation={scoreLabel} />
+              </div>
+              <div className="flex-1 space-y-2">
+                <p className="text-zinc-200 leading-relaxed text-sm">{report.summary}</p>
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+                  <p className="text-sm font-semibold text-white">{t.b2b2cSplitTitle}</p>
+                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{t.b2b2cSplitSubtitle}</p>
+                </div>
+              </div>
+            </div>
+            <MarketSideComparison
+              results={marketSideResults}
+              labels={{
+                buy: t.buy,
+                maybe: t.maybe,
+                reject: t.reject,
+                intent: t.intentTitle,
+                personas: t.segmentsPersonas,
+                topReasons: t.sideTopReasons,
+                scoreLabel: scoreLabelFor,
+              }}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6 md:flex-row md:items-start">
+            <ScoreRing score={report.score} labelTranslation={scoreLabel} />
+            <div className="flex-1 space-y-4 w-full">
+              <p className="text-zinc-200 leading-relaxed text-sm">{report.summary}</p>
+              <IntentDonut 
+                intent={report.intent} 
+                title={t.intentTitle} 
+                labels={{ buy: t.buy, maybe: t.maybe, reject: t.reject }}
+              />
+            </div>
+          </div>
+        )}
+      </section>
+
+      <ConfidenceCard
+        confidence={report.confidence}
+        labels={{
+          title: t.confidenceTitle,
+          subtitle: t.confidenceSubtitle,
+          reasons: t.confidenceReasons,
+          missing: t.confidenceMissing,
+          low: t.confidenceLow,
+          medium: t.confidenceMedium,
+          high: t.confidenceHigh,
+          fallbackReason: t.confidenceFallbackReason,
+          fallbackMissing: t.confidenceFallbackMissing,
+        }}
+      />
+
+      <NextExperimentCard
+        experiment={report.next_experiment}
+        labels={{
+          title: t.nextExperimentTitle,
+          subtitle: t.nextExperimentSubtitle,
+          hypothesis: t.nextExperimentHypothesis,
+          who: t.nextExperimentWho,
+          where: t.nextExperimentWhere,
+          message: t.nextExperimentMessage,
+          duration: t.nextExperimentDuration,
+          success: t.nextExperimentSuccess,
+        }}
+      />
+      </div>
+
+      <div className={sectionClass('audience')}>
+      {/* Usporedba publika (samo ako je test rađen po ciljanim publikama) */}
+      {report.segments && report.segments.length > 0 && (
+        <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+          <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-2">
+            🎯 {t.segmentsTitle}
+          </h2>
+          <p className="text-xs text-zinc-500 mb-4">{t.segmentsSubtitle}</p>
+          <SegmentComparison
+            segments={report.segments}
+            labels={{
+              personas: t.segmentsPersonas,
+              winner: t.segmentsWinner,
+              buy: t.buy,
+              maybe: t.maybe,
+              reject: t.reject,
+            }}
+          />
+        </section>
+      )}
+
+      {/* 2. Target Skupina */}
+      <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
+          {t.sectionAudience}
+        </h2>
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="flex-1 space-y-4">
+            <div>
+              <p className="text-sm text-zinc-400 mb-1">{t.primaryAudience}</p>
+              <p className="text-zinc-100 font-medium text-sm">{report.target_audience.profile}</p>
+            </div>
+
+            {report.target_audience.assumption_vs_reality !== 'No assumption provided' && (
+              <div className="rounded-2xl bg-indigo-950/40 border border-indigo-800/50 px-4 py-3">
+                <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.18em] text-indigo-400">{t.assumptionVsReality}</p>
+                <p className="text-zinc-200 text-sm">{report.target_audience.assumption_vs_reality}</p>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/35 p-4">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">{t.topReasons}</p>
+              <ul className="space-y-1">
+                {report.target_audience.top_reasons_to_buy.map((r, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-zinc-200">
+                    <span className="text-green-500 mt-0.5">✓</span> {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="w-full rounded-2xl border border-zinc-800/80 bg-zinc-950/35 p-4 md:w-64">
+            <p className="text-sm text-zinc-400 mb-2 text-center">{t.primaryBuyerProfile}</p>
+            <AudienceRadar 
+              radar={report.target_audience.radar_data} 
+              labels={{ 
+                tech: t.radarTech, 
+                budget: t.radarBudget, 
+                timeSaving: t.radarTime, 
+                risk: t.radarRisk 
+              }} 
+            />
+            <div className="mt-1 grid grid-cols-1 gap-2 text-center text-xs text-zinc-400 sm:grid-cols-2">
+              <span>{t.radarTech}: {report.target_audience.radar_data.tech}/10</span>
+              <span>{t.radarBudget}: {report.target_audience.radar_data.budget}/10</span>
+              <span>{t.radarTime}: {report.target_audience.radar_data.time_saving}/10</span>
+              <span>{t.radarRisk}: {report.target_audience.radar_data.risk}/10</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </div>
+
+      <div className={sectionClass('objections')}>
+      {/* 3. Zid odbijanja */}
+      <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
+          {t.sectionRejection}
+        </h2>
+        <div className="space-y-6">
+          <RejectionBar reasons={report.rejection.reasons} tooltipLabel={t.objectionShare} />
+
+          <div>
+            <p className="text-sm text-zinc-400 mb-3">{t.skepticsVoices}</p>
+            <div className="grid gap-4">
+              {report.rejection.quotes.map((q, i) => (
+                <blockquote
+                  key={i}
+                  className="rounded-2xl border border-red-900/30 bg-red-950/20 px-4 py-3 text-sm text-zinc-200 italic"
+                >
+                  &ldquo;{q}&rdquo;
+                </blockquote>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Pitanja iz mase / discovery board */}
+      <DiscoveryQuestionBoard
+        questions={discoveryQuestions}
+        labels={{
+          title: t.discoveryBoardTitle,
+          subtitle: t.discoveryBoardSubtitle,
+          payer: t.discoveryPayer,
+          user: t.discoveryUser,
+          general: t.discoveryGeneral,
+          context: t.discoveryContext,
+          empty: t.discoveryEmpty,
+        }}
+      />
+
+      </div>
+
+      <div className={sectionClass('action')}>
+      {/* 5. Akcijski plan */}
+      <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
+        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
+          {t.actionPlan}
+        </h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { icon: '🛠', label: t.product, text: report.action_plan.product, color: 'border-blue-800/40 bg-blue-950/20' },
+            { icon: '📣', label: t.marketing, text: report.action_plan.marketing, color: 'border-purple-800/40 bg-purple-950/20' },
+            { icon: '💰', label: t.pricing, text: report.action_plan.pricing, color: 'border-green-800/40 bg-green-950/20' },
+          ].map(({ icon, label, text, color }) => (
+            <div key={label} className={`rounded-2xl border ${color} p-4 space-y-2 shadow-[0_10px_30px_rgba(0,0,0,0.10)]`}>
+              <div className="text-2xl">{icon}</div>
+              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">{label}</p>
+              <p className="text-sm text-zinc-200 leading-relaxed">{text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+      </div>
+
+      <div className={sectionClass('deeper')}>
+      {(showToolShelf || activeSection === 'deeper') && (
+        <>
       <CommandCenter
         report={report}
         form={form}
@@ -2811,154 +3148,26 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
           noMatch: t.commandNoMatch,
         }}
       />
-
-      {/* 1. Executive Summary */}
-      <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
-        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
-          {t.sectionSummary}
-        </h2>
-        {marketSideResults.length >= 2 ? (
-          <div className="space-y-5">
-            <div className="flex flex-col md:flex-row gap-4 md:items-start">
-              <div className="md:w-40 flex-shrink-0 flex justify-center">
-                <ScoreRing score={report.score} labelTranslation={scoreLabel} />
-              </div>
-              <div className="flex-1 space-y-2">
-                <p className="text-zinc-200 leading-relaxed text-sm">{report.summary}</p>
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 px-4 py-3">
-                  <p className="text-sm font-semibold text-white">{t.b2b2cSplitTitle}</p>
-                  <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{t.b2b2cSplitSubtitle}</p>
-                </div>
-              </div>
-            </div>
-            <MarketSideComparison
-              results={marketSideResults}
-              labels={{
-                buy: t.buy,
-                maybe: t.maybe,
-                reject: t.reject,
-                intent: t.intentTitle,
-                personas: t.segmentsPersonas,
-                topReasons: t.sideTopReasons,
-                scoreLabel: scoreLabelFor,
-              }}
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-            <ScoreRing score={report.score} labelTranslation={scoreLabel} />
-            <div className="flex-1 space-y-4 w-full">
-              <p className="text-zinc-200 leading-relaxed text-sm">{report.summary}</p>
-              <IntentDonut 
-                intent={report.intent} 
-                title={t.intentTitle} 
-                labels={{ buy: t.buy, maybe: t.maybe, reject: t.reject }}
-              />
-            </div>
-          </div>
-        )}
-      </section>
-
-      <ConfidenceCard
-        confidence={report.confidence}
-        labels={{
-          title: t.confidenceTitle,
-          subtitle: t.confidenceSubtitle,
-          reasons: t.confidenceReasons,
-          missing: t.confidenceMissing,
-          low: t.confidenceLow,
-          medium: t.confidenceMedium,
-          high: t.confidenceHigh,
-          fallbackReason: t.confidenceFallbackReason,
-          fallbackMissing: t.confidenceFallbackMissing,
-        }}
-      />
+      {/* ── Grupa: dublje on-demand analize ── */}
+      <div className="pt-2">
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-zinc-800" />
+          <span className="text-[11px] uppercase tracking-widest text-zinc-500">{t.deeperTitle}</span>
+          <div className="h-px flex-1 bg-zinc-800" />
+        </div>
+        <p className="text-center text-xs text-zinc-600 mt-1.5">{t.deeperSubtitle}</p>
       </div>
 
-      <div className={desktopSectionClass('audience')}>
-      {/* Usporedba publika (samo ako je test rađen po ciljanim publikama) */}
-      {report.segments && report.segments.length > 0 && (
-        <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
-          <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-2">
-            🎯 {t.segmentsTitle}
-          </h2>
-          <p className="text-xs text-zinc-500 mb-4">{t.segmentsSubtitle}</p>
-          <SegmentComparison
-            segments={report.segments}
-            labels={{
-              personas: t.segmentsPersonas,
-              winner: t.segmentsWinner,
-              buy: t.buy,
-              maybe: t.maybe,
-              reject: t.reject,
-            }}
-          />
-        </section>
-      )}
-
-      {/* 2. Target Skupina */}
-      <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
-        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
-          {t.sectionAudience}
-        </h2>
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="flex-1 space-y-4">
-            <div>
-              <p className="text-sm text-zinc-400 mb-1">{t.primaryAudience}</p>
-              <p className="text-zinc-100 font-medium text-sm">{report.target_audience.profile}</p>
-            </div>
-
-            {report.target_audience.assumption_vs_reality !== 'No assumption provided' && (
-              <div className="rounded-lg bg-indigo-950/40 border border-indigo-800/50 px-4 py-3">
-                <p className="text-xs text-indigo-400 font-medium mb-1">{t.assumptionVsReality}</p>
-                <p className="text-zinc-200 text-sm">{report.target_audience.assumption_vs_reality}</p>
-              </div>
-            )}
-
-            <div>
-              <p className="text-sm text-zinc-400 mb-2">{t.topReasons}</p>
-              <ul className="space-y-1">
-                {report.target_audience.top_reasons_to_buy.map((r, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-zinc-200">
-                    <span className="text-green-500 mt-0.5">✓</span> {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="md:w-64 w-full">
-            <p className="text-sm text-zinc-400 mb-2 text-center">{t.primaryBuyerProfile}</p>
-            <AudienceRadar 
-              radar={report.target_audience.radar_data} 
-              labels={{ 
-                tech: t.radarTech, 
-                budget: t.radarBudget, 
-                timeSaving: t.radarTime, 
-                risk: t.radarRisk 
-              }} 
-            />
-            <div className="grid grid-cols-2 gap-2 text-xs text-zinc-400 text-center mt-1">
-              <span>{t.radarTech}: {report.target_audience.radar_data.tech}/10</span>
-              <span>{t.radarBudget}: {report.target_audience.radar_data.budget}/10</span>
-              <span>{t.radarTime}: {report.target_audience.radar_data.time_saving}/10</span>
-              <span>{t.radarRisk}: {report.target_audience.radar_data.risk}/10</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Opportunity Score (JTBD) — samo ako postoji (novi izvještaji) */}
+      {/* Opportunity Score (JTBD) — dublji uvid */ }
       {report.opportunity && (
-        <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
+        <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
           <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
             {t.sectionOpportunity}
           </h2>
           <div className="flex flex-col md:flex-row gap-6">
-            {/* Score gauge */}
-            <div className="md:w-52 flex-shrink-0 flex flex-col items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+            <div className="flex flex-shrink-0 flex-col items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 md:w-52">
               <div
-                className="text-5xl font-bold"
+                className="text-4xl font-bold sm:text-5xl"
                 style={{ color: report.opportunity.score >= 65 ? '#22c55e' : report.opportunity.score >= 45 ? '#eab308' : '#ef4444' }}
               >
                 {report.opportunity.score}
@@ -2975,7 +3184,6 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
                 </div>
               </div>
             </div>
-            {/* Verdict + unmet needs + alternatives */}
             <div className="flex-1 space-y-4">
               <p className="text-sm text-zinc-200 leading-relaxed">{report.opportunity.verdict}</p>
 
@@ -3012,9 +3220,9 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
         </section>
       )}
 
-      {/* Emergentni klasteri (k-means) — samo ako postoje (≥2 skupine) */}
+      {/* Emergentni klasteri (k-means) — dublji uvid */}
       {report.clusters && report.clusters.length > 0 && (
-        <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
+        <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
           <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-2">
             {t.sectionClusters}
           </h2>
@@ -3024,7 +3232,7 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
           </p>
           <div className="grid md:grid-cols-2 gap-4">
             {report.clusters.map((c) => (
-              <div key={c.id} className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-3">
+              <div key={c.id} className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-3 shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-zinc-100">{c.label}</p>
@@ -3035,7 +3243,6 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
                   </span>
                 </div>
 
-                {/* intent mini-bar */}
                 <div className="flex h-2 rounded-full overflow-hidden bg-zinc-800">
                   <div className="bg-green-500" style={{ width: `${c.intent.buy}%` }} title={`buy ${c.intent.buy}%`} />
                   <div className="bg-yellow-500" style={{ width: `${c.intent.maybe}%` }} title={`maybe ${c.intent.maybe}%`} />
@@ -3066,82 +3273,6 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
           </div>
         </section>
       )}
-      </div>
-
-      <div className={desktopSectionClass('objections')}>
-      {/* 3. Zid odbijanja */}
-      <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
-        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
-          {t.sectionRejection}
-        </h2>
-        <div className="space-y-6">
-          <RejectionBar reasons={report.rejection.reasons} tooltipLabel={t.objectionShare} />
-
-          <div>
-            <p className="text-sm text-zinc-400 mb-3">{t.skepticsVoices}</p>
-            <div className="grid gap-4">
-              {report.rejection.quotes.map((q, i) => (
-                <blockquote
-                  key={i}
-                  className="rounded-lg border border-red-900/30 bg-red-950/20 px-4 py-3 text-sm text-zinc-200 italic"
-                >
-                  &ldquo;{q}&rdquo;
-                </blockquote>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Pitanja iz mase / discovery board */}
-      <DiscoveryQuestionBoard
-        questions={discoveryQuestions}
-        labels={{
-          title: t.discoveryBoardTitle,
-          subtitle: t.discoveryBoardSubtitle,
-          payer: t.discoveryPayer,
-          user: t.discoveryUser,
-          general: t.discoveryGeneral,
-          context: t.discoveryContext,
-          empty: t.discoveryEmpty,
-        }}
-      />
-      </div>
-
-      <div className={desktopSectionClass('action')}>
-      {/* 5. Akcijski plan */}
-      <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
-        <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl mb-5">
-          {t.actionPlan}
-        </h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          {[
-            { icon: '🛠', label: t.product, text: report.action_plan.product, color: 'border-blue-800/40 bg-blue-950/20' },
-            { icon: '📣', label: t.marketing, text: report.action_plan.marketing, color: 'border-purple-800/40 bg-purple-950/20' },
-            { icon: '💰', label: t.pricing, text: report.action_plan.pricing, color: 'border-green-800/40 bg-green-950/20' },
-          ].map(({ icon, label, text, color }) => (
-            <div key={label} className={`rounded-xl border ${color} p-4 space-y-2`}>
-              <div className="text-2xl">{icon}</div>
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">{label}</p>
-              <p className="text-sm text-zinc-200 leading-relaxed">{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      </div>
-
-      <div className={desktopSectionClass('deeper')}>
-      {(showToolShelf || activeSection === 'deeper') && (
-        <>
-      {/* ── Grupa: dublje on-demand analize ── */}
-      <div className="pt-2">
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-zinc-800" />
-          <span className="text-[11px] uppercase tracking-widest text-zinc-500">{t.deeperTitle}</span>
-          <div className="h-px flex-1 bg-zinc-800" />
-        </div>
-        <p className="text-center text-xs text-zinc-600 mt-1.5">{t.deeperSubtitle}</p>
-      </div>
 
       {/* Founder Strategy Review — on-demand */}
       <StrategySection
@@ -3302,9 +3433,9 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       )}
       </div>
 
-      <div className={desktopSectionClass('personas')}>
+      <div className={sectionClass('personas')}>
       {/* 6. Persona Browser */}
-      <section className="rounded-2xl bg-zinc-900 border border-zinc-800 p-6">
+      <section className="rounded-[1.6rem] border border-zinc-800 bg-zinc-900 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.16)]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-xl font-black text-indigo-200 tracking-normal md:text-2xl">
@@ -3339,20 +3470,20 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
         {showPersonas && (
           <div className="space-y-6 pt-4 border-t border-zinc-800 animate-fadeIn">
             {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t.searchPlaceholder}
-                className="flex-1 rounded-lg bg-zinc-950 border border-zinc-800 focus:border-zinc-700 px-3 py-2 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none transition-colors"
+                className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-xs text-zinc-200 placeholder-zinc-500 transition-colors focus:border-zinc-700 focus:outline-none"
               />
-              <div className="flex bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 text-xs font-semibold self-start sm:self-auto">
+              <div className="flex self-start rounded-xl border border-zinc-800 bg-zinc-950 p-0.5 text-xs font-semibold sm:self-auto">
                 {(['all', 'buy', 'maybe', 'reject'] as const).map((dec) => (
                   <button
                     key={dec}
                     onClick={() => setDecisionFilter(dec)}
-                    className={`px-3 py-1.5 rounded transition-colors cursor-pointer ${
+                    className={`rounded-lg px-3 py-1.5 transition-colors cursor-pointer ${
                       decisionFilter === dec
                         ? dec === 'buy'
                           ? 'bg-green-600/20 text-green-400 border border-green-800/30'
@@ -3403,7 +3534,7 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
                 }
 
                 return (
-                  <div className="grid md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1">
+                  <div className="grid gap-4 md:max-h-[600px] md:grid-cols-2 md:overflow-y-auto md:pr-1">
                     {filteredCards.map(({ persona, reaction }) => {
                       if (!reaction) return null;
                       const decColor =

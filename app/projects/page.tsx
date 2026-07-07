@@ -36,10 +36,12 @@ export default function ProjectsPage() {
       empty: 'Još nemaš spremljenih projekata.',
       emptyHelp: 'Pokreni prvi test bez straha. Projekt možeš spremiti nakon izvještaja.',
       emptyCta: 'Validiraj svoju prvu ideju',
+      continueLatest: 'Nastavi zadnji projekt',
+      continueLatestHelp: 'Najbrzi povratak u zadnji spremljeni tok rada.',
       open: 'Otvori izvještaj',
       noReport: 'Nema izvještaja',
-      advisors: 'Savjetnici',
-      advisorsHelp: 'Razgovaraj o sljedećim potezima',
+      advisors: 'Next-step',
+      advisorsHelp: 'Research i Positioning potezi nakon izvjestaja',
       delete: 'Obriši',
       exportFile: 'Izvezi projekt',
       importFile: 'Uvezi projekt',
@@ -79,10 +81,12 @@ export default function ProjectsPage() {
       empty: 'You have no saved projects yet.',
       emptyHelp: 'Run your first test without pressure. You can save a project after the report.',
       emptyCta: 'Validate your first idea',
+      continueLatest: 'Continue latest project',
+      continueLatestHelp: 'The fastest way back into your latest saved flow.',
       open: 'Open report',
       noReport: 'No report',
-      advisors: 'Advisors',
-      advisorsHelp: 'Discuss next moves',
+      advisors: 'Next-step',
+      advisorsHelp: 'Research and Positioning moves after the report',
       delete: 'Delete',
       exportFile: 'Export project',
       importFile: 'Import project',
@@ -128,6 +132,9 @@ export default function ProjectsPage() {
       timeStyle: 'short',
     });
   }, [projects, language]);
+  const latestProject = useMemo(() => {
+    return [...projects].sort((a, b) => Date.parse(b.updated_at || b.created_at) - Date.parse(a.updated_at || a.created_at))[0] ?? null;
+  }, [projects]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -348,8 +355,8 @@ export default function ProjectsPage() {
       )}
 
       {/* Navbar */}
-      <nav className="border-b border-zinc-800 px-4 py-4 flex items-center justify-between sticky top-0 bg-zinc-950/90 backdrop-blur-sm z-10 sm:px-6">
-        <div className="flex items-center gap-3">
+      <nav className="sticky top-0 z-10 flex flex-col gap-3 border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={() => router.push('/')}
             className="text-zinc-400 hover:text-white transition-colors text-sm flex items-center gap-1.5 cursor-pointer"
@@ -358,15 +365,18 @@ export default function ProjectsPage() {
           </button>
           <span className="text-zinc-700">|</span>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 shadow-lg shadow-indigo-950/30">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                 <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fillOpacity="0.9" />
               </svg>
             </div>
-            <span className="font-semibold text-sm text-white">{t.title}</span>
+            <span className="truncate font-semibold text-sm text-white">{t.title}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="sm:hidden">
+            <LocalProfileBadge language={language} />
+          </div>
           <div className="hidden sm:block">
             <LocalProfileBadge language={language} />
           </div>
@@ -382,25 +392,41 @@ export default function ProjectsPage() {
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:py-8">
         <div className="mb-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">{t.title}</h1>
+              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-800/40 bg-indigo-950/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-300" />
+                {language === 'en' ? 'Project workspace' : 'Projektni workspace'}
+              </div>
+              <h1 className="mt-3 text-2xl font-bold text-white">{t.title}</h1>
               <p className="text-zinc-400 text-sm">{t.subtitle}</p>
             </div>
-            <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-800/60 bg-cyan-950/20 px-4 py-2 text-sm font-bold text-cyan-100 transition-colors hover:border-cyan-500 hover:text-white">
-              {t.importFile}
-              <input
-                type="file"
-                accept=".ai-project,application/json"
-                className="hidden"
-                onChange={(event) => {
-                  void handleImport(event.target.files?.[0] ?? null);
-                  event.currentTarget.value = '';
-                }}
-              />
-            </label>
+            <div className="flex flex-wrap gap-2">
+              {latestProject && (
+                <button
+                  type="button"
+                  onClick={() => (latestProject.report ? handleOpen(latestProject) : handleOpenAdvisors(latestProject))}
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-indigo-500"
+                  title={t.continueLatestHelp}
+                >
+                  {t.continueLatest}
+                </button>
+              )}
+              <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-800/60 bg-cyan-950/20 px-4 py-2 text-sm font-bold text-cyan-100 transition-colors hover:border-cyan-500 hover:text-white">
+                {t.importFile}
+                <input
+                  type="file"
+                  accept=".ai-project,application/json"
+                  className="hidden"
+                  onChange={(event) => {
+                    void handleImport(event.target.files?.[0] ?? null);
+                    event.currentTarget.value = '';
+                  }}
+                />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -423,7 +449,7 @@ export default function ProjectsPage() {
         )}
 
         {!loading && (
-          <section className="mb-6 rounded-2xl border border-cyan-900/40 bg-cyan-950/10 p-4">
+          <section className="mb-6 rounded-[1.6rem] border border-cyan-900/40 bg-cyan-950/10 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.12)]">
             <div className="flex flex-col gap-4">
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),18rem] lg:items-start">
                 <div className="min-w-0">
@@ -494,15 +520,15 @@ export default function ProjectsPage() {
         )}
 
         {!loading && !error && projects.length > 0 && (
-          <div className="grid max-w-full gap-3 overflow-hidden">
+          <div className="grid max-w-full gap-4 overflow-hidden">
             {projects.map((project) => (
               <div
                 key={project.id}
-                className="grid max-w-full grid-cols-1 gap-4 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 p-4 transition-colors hover:border-zinc-700 sm:grid-cols-[auto,minmax(0,1fr)] sm:items-center lg:grid-cols-[auto,minmax(0,1fr),11rem]"
+                className="grid max-w-full grid-cols-1 gap-4 overflow-hidden rounded-[1.5rem] border border-zinc-800 bg-zinc-900/90 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.12)] transition-colors hover:border-zinc-700 sm:grid-cols-[auto,minmax(0,1fr)] sm:items-center lg:grid-cols-[auto,minmax(0,1fr),11rem]"
               >
                 {/* Score badge */}
                 <div
-                  className="flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center border"
+                  className="flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center rounded-2xl border"
                   style={{
                     borderColor: scoreColor(project.summary.score) + '55',
                     background: scoreColor(project.summary.score) + '15',
@@ -541,31 +567,31 @@ export default function ProjectsPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex w-full flex-wrap gap-2 sm:col-span-2 lg:col-span-1 lg:w-44 lg:flex-col">
+                <div className="grid w-full grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1 lg:flex lg:w-44 lg:flex-col">
                   <button
                     onClick={() => handleOpen(project)}
                     disabled={!project.report}
-                    className="min-w-[8rem] flex-1 text-xs bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white rounded-lg px-3 py-2 transition-colors cursor-pointer font-bold"
+                    className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 lg:w-full"
                   >
                     {project.report ? t.open : t.noReport}
                   </button>
                   <button
                     onClick={() => handleOpenAdvisors(project)}
-                    className="min-w-[8rem] flex-1 text-xs font-medium text-zinc-200 border border-zinc-700 hover:border-violet-600 rounded-lg px-3 py-2 transition-colors cursor-pointer"
+                    className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors hover:border-violet-600 cursor-pointer lg:w-full"
                     title={t.advisorsHelp}
                   >
                     ✨ {t.advisors}
                   </button>
                   <button
                     onClick={() => handleExport(project)}
-                    className="min-w-[6rem] flex-1 rounded-lg px-3 py-1 text-[11px] text-cyan-500 transition-colors hover:text-cyan-300 cursor-pointer lg:flex-none"
+                    className="rounded-xl border border-zinc-800 px-3 py-2 text-[11px] text-cyan-500 transition-colors hover:text-cyan-300 cursor-pointer lg:w-full lg:border-transparent lg:py-1"
                   >
                     {t.exportFile}
                   </button>
                   <button
                     onClick={() => setPendingDelete(project)}
                     disabled={deletingId === project.id}
-                    className="min-w-[6rem] flex-1 rounded-lg px-3 py-1 text-[11px] text-zinc-600 transition-colors hover:text-red-400 cursor-pointer lg:flex-none"
+                    className="rounded-xl border border-zinc-800 px-3 py-2 text-[11px] text-zinc-500 transition-colors hover:text-red-400 cursor-pointer lg:w-full lg:border-transparent lg:py-1"
                   >
                     {deletingId === project.id ? t.deleting : t.delete}
                   </button>

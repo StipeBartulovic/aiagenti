@@ -1,6 +1,63 @@
 import { runEngine } from '@/lib/engine';
 import type { IdeaFormData, ValidationReport } from '@/lib/types';
 import { ServerActionError } from './errors';
+import dns from 'node:dns/promises';
+import net from 'node:net';
+
+function isPrivateIpv4(host: string): boolean {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return false;
+  const parts = host.split('.').map((part) => Number(part));
+  if (parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+
+  if (parts[0] === 10) return true;
+  if (parts[0] === 127) return true;
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  if (parts[0] === 0) return true;
+  return false;
+}
+
+function isPrivateIpv6(host: string): boolean {
+  const normalized = host.toLowerCase();
+  return normalized === '::1'
+    || normalized.startsWith('fc')
+    || normalized.startsWith('fd')
+    || normalized.startsWith('fe80:')
+    || normalized === '::';
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const normalized = hostname.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized === 'localhost' || normalized.endsWith('.localhost') || normalized.endsWith('.local')) return true;
+
+  const ipVersion = net.isIP(normalized);
+  if (ipVersion === 4) return isPrivateIpv4(normalized);
+  if (ipVersion === 6) return isPrivateIpv6(normalized);
+  return false;
+}
+
+async function assertSafeExternalUrl(rawUrl: string): Promise<void> {
+  const parsed = new URL(rawUrl);
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new ServerActionError('Only http and https URLs are allowed.', 400, 'invalid_website_url');
+  }
+
+  if (isBlockedHostname(parsed.hostname)) {
+    throw new ServerActionError('Private or local website URLs are not allowed.', 400, 'blocked_website_url');
+  }
+
+  try {
+    const records = await dns.lookup(parsed.hostname, { all: true });
+    if (records.some((record) => isBlockedHostname(record.address))) {
+      throw new ServerActionError('Private or local website URLs are not allowed.', 400, 'blocked_website_url');
+    }
+  } catch (err) {
+    if (err instanceof ServerActionError) throw err;
+    throw new ServerActionError('Could not verify website URL.', 400, 'invalid_website_url');
+  }
+}
 
 async function extractTextFromUrl(url: string): Promise<string> {
   try {
@@ -12,6 +69,7 @@ async function extractTextFromUrl(url: string): Promise<string> {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
+      redirect: 'error',
     });
     clearTimeout(id);
 
@@ -59,7 +117,7 @@ export async function validateIdea(input: IdeaFormData): Promise<ValidationRepor
       targetUrl = `https://${targetUrl}`;
     }
     try {
-      new URL(targetUrl);
+      await assertSafeExternalUrl(targetUrl);
       const extracted = await extractTextFromUrl(targetUrl);
       if (extracted) {
         body.website_context = extracted;

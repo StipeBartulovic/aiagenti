@@ -164,8 +164,8 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <nav className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
             <button
               type="button"
               onClick={() => router.back()}
@@ -174,15 +174,18 @@ export default function SettingsPage() {
               <ArrowLeft className="h-4 w-4" />
               {t.back}
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-600/20 text-cyan-300">
                 <Settings2 className="h-4 w-4" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-white">{t.title}</p>
-                <p className="text-xs text-zinc-500">{t.subtitle}</p>
+                <p className="text-xs leading-relaxed text-zinc-500">{t.subtitle}</p>
               </div>
             </div>
+          </div>
+          <div className="sm:hidden">
+            <LocalProfileBadge language={language} />
           </div>
           <div className="hidden items-center gap-2 sm:flex">
             <LocalProfileBadge language={language} />
@@ -190,7 +193,7 @@ export default function SettingsPage() {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <section className="space-y-6">
             <div className="rounded-2xl border border-cyan-900/40 bg-cyan-950/20 p-5">
@@ -243,7 +246,7 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="grid gap-3">
                 <button
                   type="button"
                   onClick={() => update('hostingMode', 'hosted')}
@@ -360,7 +363,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <aside className="space-y-6">
+          <aside className="space-y-6 lg:sticky lg:top-[88px] lg:self-start">
             <AccountModeNotice language={language} />
             <SetupStatus language={language} compact />
 

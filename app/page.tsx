@@ -9,18 +9,26 @@ import TokenWallet from '@/components/TokenWallet';
 import SetupStatus from '@/components/SetupStatus';
 import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
-import { TOKEN_COSTS, addSimulatedPurchase, formatTokens, spendTokens } from '@/lib/tokens';
+import { TOKEN_COSTS, addSimulatedPurchase, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
-import { Settings2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
 import type { IdeaFormData, SegmentSpec } from '@/lib/types';
 
 export default function Home() {
   const router = useRouter();
-  const { user, loading: authLoading, language, setLanguage } = useAuth();
+  const { loading: authLoading, language, setLanguage } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingAudiences, setLoadingAudiences] = useState(false);
   const [error, setError] = useState('');
   const [mockTab, setMockTab] = useState<'summary' | 'objections' | 'questions'>('summary');
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    stats: false,
+    preview: false,
+    steps: false,
+    workspace: false,
+    pricing: false,
+    testimonials: false,
+  });
   const [hasStoredReport, setHasStoredReport] = useState(() =>
     typeof window !== 'undefined' ? Boolean(window.sessionStorage.getItem('aivalidator_report')) : false
   );
@@ -113,131 +121,120 @@ export default function Home() {
     setPendingForm(null);
   };
 
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections((current) => ({
+      ...current,
+      [sectionId]: !current[sectionId],
+    }));
+  };
+
+  const isSectionExpanded = (sectionId: string) => expandedSections[sectionId] ?? false;
+
   const t = {
     hr: {
-      badge: '50 AI persona analizira tvoju ideju',
-      title1: 'Validiraj svoju ideju ',
-      title2: 'za 30 sekundi',
-      description: 'Simuliramo 50 raznolikih kupaca koji reagiraju na tvoju ideju — tko bi kupio, tko odbija i zašto. Pronađi rupe u prezentaciji prije nego potrošiš tjedne i novac.',
-      features: ['Kupovna namjera', 'Ciljna skupina', 'Razlozi odbijanja', 'Pitanja kupaca', 'Akcijski plan'],
+      title1: 'Testiraj ideju ',
+      title2: 'prije gradnje',
+      heroSubtitle: 'Upisi ideju i odmah vidi kupuje li pricu itko osim tebe.',
+      heroProof: ['50 AI persona', 'glavni prigovori', 'prvi test'],
       howItWorks: 'Kako funkcionira',
       steps: [
-        { title: 'Opiši ideju', desc: 'Unesi naziv, opis i cijenu svog proizvoda.' },
-        { title: 'AI simulira tržište', desc: '50 raznolikih persona reagira na tvoju ideju paralelno.' },
-        { title: 'Dobij izvještaj', desc: 'Score, ciljna skupina, prigovori, pitanja i akcijski plan.' },
+        { title: 'Napiši ideju', desc: 'Dovoljna je jedna recenica.' },
+        { title: 'Dobij signal', desc: 'Vidis sto prolazi, a sto zapinje.' },
+        { title: 'Pokreni test', desc: 'Dobij prvi potez za van.' },
       ],
       disclaimer: 'Disclaimer: AI Validator simulira tržišne reakcije koristeći AI persone, ne prave korisnike. Koristi rezultate kao smjernicu za rano testiranje ideja, ne kao garanciju tržišnog uspjeha.',
       loadingText: 'Učitavam...',
       findingAudiences: 'Tražim ciljane publike za tvoju ideju...',
       logoutBtn: 'Odjavi se',
       myProjectsBtn: 'Moji projekti',
-      accountTitle: 'Profil i saldo',
-      accountSubtitle: 'Hosted servis i lokalni BYO profil su odvojeni, a saldo je vezan uz odabrani način rada.',
-      localProfilePill: 'Lokalni profil',
-      firstStepTitle: 'AI prvi korak',
-      firstStepSubtitle: 'Napiši čime se baviš, za koga je to i kako naplaćuješ. AI će prvo složiti kontekst, pa tek onda graditi sve ostalo ispod.',
-      stepHint: 'Kreni s jednom jasnom rečenicom. Sve ostalo AI može razraditi kroz sljedeće korake.',
-      workspaceTitle: 'Profil, tokeni i setup',
-      workspaceSubtitle: 'Kad pokreneš prvi korak, ovdje pratiš lokalni profil, tokene i način rada.',
+      workspaceTitle: 'Lokalni profil i tokeni',
+      workspaceSubtitle: 'Otvori tek kad krenes spremati rad i trositi tokene.',
       stats: [
         { value: '50+', label: 'AI persona po testu' },
-        { value: '5', label: 'AI savjetnika u panelu' },
-        { value: '~30s', label: 'do punog izvještaja' },
+        { value: '2', label: 'glavna next-step smjera' },
+        { value: '~30s', label: 'do prvog izvjestaja' },
       ],
-      previewTitle: 'Pogledaj kako izgleda izvještaj',
-      previewSubtitle: 'Isprobaj interaktivnu simulaciju primjera izvještaja iz lokalnog profila.',
-      pricingTitle: 'Pay as you go tokeni',
-      pricingSubtitle: 'Kupi tokene kad ti trebaju. Svaka validacija, alat ili savjetnicki odgovor trosi samo ono sto stvarno pokrenes.',
+      previewTitle: 'Primjer izvjestaja',
+      previewSubtitle: 'Brzi pregled izlaza nakon prve validacije.',
+      pricingTitle: 'Tokeni kad ti zatrebaju',
+      pricingSubtitle: 'Bez pretplate. Trosis samo kad stvarno koristis AI.',
       pricingPlans: [
         { name: 'Startni bonus', price: '3.600', period: ' tokena', desc: 'Dobijes ga automatski pri prvom otvaranju lokalnog profila.', features: ['1 validacija s 50 persona', 'Prijedlog ciljanih publika', 'Nekoliko report alata', 'Oko 10 brzih upita savjetnicima', 'Bez kartice i bez pretplate'], btn: 'Kreni besplatno', active: false },
         { name: 'Test top-up', price: '10€', period: ' = 10.000 tokena', desc: 'Simulirana kupnja za testiranje UX-a naplate.', features: ['Klik i tokeni se odmah dodaju', 'Nema checkouta ni stvarne naplate', 'Tokeni se trose po akciji', 'Saldo ostaje u ovom browseru', 'Kasnije se spaja na pravi payment'], btn: 'Dodaj 10€ tokena', active: true },
         { name: 'Pay as you go', price: '0€', period: ' mjesecno', desc: 'Nema mjesecne obveze. Placas samo kad koristis AI.', features: ['Validacija: 1.200 tokena', 'Report alati: 250-550 tokena', 'Savjetnik: 140 tokena', 'Dublji savjetnik: 380 tokena', 'Memorija i taskovi: mali dodatni trosak'], btn: 'Pogledaj wallet', active: false },
       ],
-      testimonialsTitle: 'Što kažu founderi',
-      testimonialsSubtitle: 'Kako je AI Validator pomogao u ranom testiranju tržišta.',
+      testimonialsTitle: 'Rani feedback',
+      testimonialsSubtitle: 'Kratki dojmovi ranih korisnika.',
       testimonials: [
         { quote: 'AI nam je ukazao na 3 ključna pitanja o privatnosti podataka koja su nam investitori postavili tjedan dana kasnije na pitchu. Spasilo nas je od nepripremljenosti.', author: 'Stjepan M., FinTech Founder' },
         { quote: 'Umjesto tjedana i tisuća eura za prve ankete, testirao sam SaaS ideju za 30 sekundi i odmah uočio zašto bi je HR menadžeri odbili. Zlata vrijedi.', author: 'Ana K., SaaS Developer' },
       ],
-      mockupHeader: 'Primjer: FoodExpress (B2B2C Dostava)',
-      mockupScore: 'Viability Score: 82/100',
-      mockupStats: 'Kupio bi: 64% | Možda: 24% | Odbija: 12%',
+      mockupHeader: 'Primjer: SignalBoard (Founder SaaS)',
+      mockupScore: 'Idea Score: 68/100',
+      mockupStats: 'Kupio bi: 38% | Mozda: 34% | Odbija: 28%',
       mockTabs: { summary: 'Rezime', objections: 'Zid odbijanja', questions: 'Pitanja iz mase' },
-      mockSummary: 'FoodExpress pokazuje visoku održivost (82/100). Krajnji kupci (B2C) jako cijene brzinu dostave, no restorani (B2B) izražavaju visoku zabrinutost oko visokih provizija (15%+) i nedostatka integracija s blagajnama.',
-      mockObjection: 'Prevelika konkurencija s Woltom i Glovom na našem području.',
-      mockObjection2: 'Ne vidim kako možemo ostvariti profit uz ovolike provizije restorana.',
-      mockQuestion: 'Kako točno planirate riješiti problem logistike tijekom najveće gužve?',
-      mockQuestion2: 'Koje analitičke alate nudite restoranima unutar platforme?',
-      mockAnswerPlaceholder: 'Upiši odgovor i pojasni ideju...',
-      mockButton: 'Isprobaj re-analizu (Odgovori)',
-      localStart: 'Lokalni profil je spreman za testiranje',
-      localHint: 'Odmah možeš validirati ideju, spremiti projekt i otvoriti AI savjetnike bez dodatne prijave.',
-      localNotice: 'Sve što napraviš ostaje lokalno na ovom uređaju dok ne izvezeš projekt ili workspace.',
-      continueReport: 'Vrati se na zadnji izvještaj',
+      mockSummary: 'SignalBoard izgleda obecavajuce za solo SaaS foundere koji vec rade intervjue, ali signal je jos mekan. Najveci problem nije interes nego dokaz da alat stvarno stedi vrijeme i da nije samo jos jedan ChatGPT wrapper.',
+      mockObjection: 'Ovo mi zvuci korisno, ali ne vidim zasto to ne bih slozio u Notionu i ChatGPT-u.',
+      mockObjection2: 'Nemam dovoljno stvarnih intervjua da bi mi dashboard sada imao smisla.',
+      mockQuestion: 'Koji tocno rezultat founder dobije nakon prvih 5 customer intervjua?',
+      mockQuestion2: 'Sto bi me uvjerilo da ovo skracuje put do prve placene validacije?',
+      mockAnswerPlaceholder: 'Upisi odgovor ili dodatni kontekst...',
+      mockButton: 'Simuliraj odgovor',
+      continueReport: 'Vrati zadnji izvjestaj',
       errorTitle: 'Analiza nije uspjela',
       errorHelp: 'Ništa nije izgubljeno. Možeš pokušati ponovno ili promijeniti opis ideje.',
       retry: 'Pokušaj ponovno',
       editIdea: 'Uredi ideju',
     },
     en: {
-      badge: '50 AI personas analyze your idea',
-      title1: 'Validate your business idea ',
-      title2: 'in 30 seconds',
-      description: 'We simulate 50 diverse customer personas reacting to your idea — who buys, who rejects, and why. Find weaknesses in your pitch before spending weeks and money.',
-      features: ['Purchase Intent', 'Target Audience', 'Rejection Reasons', 'Customer Questions', 'Action Plan'],
+      title1: 'Test your idea ',
+      title2: 'before you build',
+      heroSubtitle: 'Type the idea and quickly see whether anyone buys the story besides you.',
+      heroProof: ['50 AI personas', 'top objections', 'first test'],
       howItWorks: 'How it works',
       steps: [
-        { title: 'Describe your idea', desc: 'Enter name, pitch, description, and price model.' },
-        { title: 'AI simulates market', desc: '50 unique buyer personas react to your idea in parallel.' },
-        { title: 'Get report', desc: 'Score, target profile, objections, questions, and action plan.' },
+        { title: 'Write the idea', desc: 'One sentence is enough.' },
+        { title: 'Get the signal', desc: 'See what lands and what breaks.' },
+        { title: 'Run the test', desc: 'Get the first move to take outside.' },
       ],
       disclaimer: 'Disclaimer: AI Validator simulates market reactions using AI personas, not real customers. Use results as a guideline for early testing, not as a guarantee of market success.',
       loadingText: 'Loading...',
       findingAudiences: 'Finding target audiences for your idea...',
       logoutBtn: 'Log out',
       myProjectsBtn: 'My projects',
-      accountTitle: 'Profile and balance',
-      accountSubtitle: 'The hosted service and the local BYO profile are separate, and the balance follows the selected mode.',
-      localProfilePill: 'Local profile',
-      firstStepTitle: 'AI first step',
-      firstStepSubtitle: 'Write what you do, who it is for, and how you charge. AI should build the context first, and only then everything else below.',
-      stepHint: 'Start with one clear sentence. AI can expand the rest through the next steps.',
-      workspaceTitle: 'Profile, tokens, and setup',
-      workspaceSubtitle: 'After the first step starts, this is where you track your local profile, tokens, and working mode.',
+      workspaceTitle: 'Local profile and tokens',
+      workspaceSubtitle: 'Open it once you want to save work and spend tokens.',
       stats: [
         { value: '50+', label: 'AI personas per test' },
-        { value: '5', label: 'AI advisors on the panel' },
-        { value: '~30s', label: 'to a full report' },
+        { value: '2', label: 'main next-step paths' },
+        { value: '~30s', label: 'to the first report' },
       ],
-      previewTitle: 'See Report in Action',
-      previewSubtitle: 'Interact with a live demo report preview from your local profile.',
-      pricingTitle: 'Pay as you go tokens',
-      pricingSubtitle: 'Buy tokens when you need them. Every validation, tool, or advisor answer spends only what you actually run.',
+      previewTitle: 'Sample report',
+      previewSubtitle: 'Quick look at the output after the first validation.',
+      pricingTitle: 'Tokens when you need them',
+      pricingSubtitle: 'No subscription. You spend only when you actually use AI.',
       pricingPlans: [
         { name: 'Starter bonus', price: '3,600', period: ' tokens', desc: 'Granted automatically when your local profile opens for the first time.', features: ['1 validation with 50 personas', 'Target audience suggestions', 'A few report tools', 'Around 10 quick advisor questions', 'No card and no subscription'], btn: 'Start free', active: false },
         { name: 'Test top-up', price: '€10', period: ' = 10,000 tokens', desc: 'Simulated purchase for testing the billing UX.', features: ['Click and tokens are added instantly', 'No checkout or real charge', 'Tokens are spent per action', 'Balance stays in this browser', 'Ready for real payment later'], btn: 'Add €10 tokens', active: true },
         { name: 'Pay as you go', price: '€0', period: ' monthly', desc: 'No monthly commitment. Pay only when you use AI.', features: ['Validation: 1,200 tokens', 'Report tools: 250-550 tokens', 'Advisor: 140 tokens', 'Deep advisor: 380 tokens', 'Memory and tasks: small extra cost'], btn: 'Open wallet', active: false },
       ],
-      testimonialsTitle: 'Loved by Founders',
-      testimonialsSubtitle: 'How AI Validator helped shape concepts before launch.',
+      testimonialsTitle: 'Early feedback',
+      testimonialsSubtitle: 'Short reactions from early users.',
       testimonials: [
         { quote: 'The AI highlighted 3 critical security concerns that investors literally asked us about during our pitch deck review a week later. Saved our round.', author: 'Steve M., FinTech Founder' },
         { quote: 'Instead of spending weeks and thousands on validation surveys, I ran my SaaS concept in 30 seconds and saw exactly why HR buyers would reject it.', author: 'Ann K., SaaS Developer' },
       ],
-      mockupHeader: 'Demo: FoodExpress (B2B2C Delivery)',
-      mockupScore: 'Viability Score: 82/100',
-      mockupStats: 'Would buy: 64% | Maybe: 24% | Rejects: 12%',
+      mockupHeader: 'Demo: SignalBoard (Founder SaaS)',
+      mockupScore: 'Idea Score: 68/100',
+      mockupStats: 'Would buy: 38% | Maybe: 34% | Rejects: 28%',
       mockTabs: { summary: 'Summary', objections: 'Rejections', questions: 'Crowd Questions' },
-      mockSummary: 'FoodExpress shows high viability (82/100). End consumers (B2C) highly value delivery speed, while restaurant owners (B2B) express severe concern regarding commission rates (15%+) and lack of POS integrations.',
-      mockObjection: 'Too much competition with local delivery giants in our cities.',
-      mockObjection2: 'I do not see how we can make a profit with such high commissions.',
-      mockQuestion: 'How exactly do you plan to handle rider logistics during peak lunch hours?',
-      mockQuestion2: 'What analytical tools do you provide for restaurant partners?',
-      mockAnswerPlaceholder: 'Type clarification or answer...',
-      mockButton: 'Try Re-analysis (Answer)',
-      localStart: 'Your local profile is ready',
-      localHint: 'You can validate ideas, save projects, and open AI advisors right away without any extra sign-in.',
-      localNotice: 'Everything stays local on this device until you export a project or workspace.',
+      mockSummary: 'SignalBoard looks promising for solo SaaS founders already doing interviews, but the signal is still soft. The biggest issue is not interest, it is proof that the tool saves time and is not just another ChatGPT wrapper.',
+      mockObjection: 'This sounds useful, but I do not see why I would not do this in Notion and ChatGPT.',
+      mockObjection2: 'I do not have enough real interviews yet for a dashboard like this to matter.',
+      mockQuestion: 'What exact result does a founder get after the first 5 customer interviews?',
+      mockQuestion2: 'What would convince me this shortens the path to first paid validation?',
+      mockAnswerPlaceholder: 'Type an answer or extra context...',
+      mockButton: 'Simulate answer',
       continueReport: 'Return to latest report',
       errorTitle: 'Analysis failed',
       errorHelp: 'Nothing was lost. You can retry or edit the idea description.',
@@ -245,6 +242,9 @@ export default function Home() {
       editIdea: 'Edit idea',
     }
   }[language];
+
+  const showLabel = language === 'en' ? 'Show' : 'Prikaži';
+  const hideLabel = language === 'en' ? 'Hide' : 'Sakrij';
 
   if (authLoading) {
     return (
@@ -298,96 +298,105 @@ export default function Home() {
             </button>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <span className="rounded-full border border-emerald-800/50 bg-emerald-950/30 px-3 py-1 text-xs text-emerald-200">
-              {t.localProfilePill}
-            </span>
-            <span className="max-w-[180px] truncate text-xs text-zinc-400 hidden sm:inline">{user?.email}</span>
             <button
               onClick={() => router.push('/projects')}
-              className="text-xs text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:bg-zinc-800 hover:text-white"
             >
               {t.myProjectsBtn}
             </button>
             <button
               onClick={() => router.push('/settings')}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
               title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
             >
               <Settings2 className="h-3.5 w-3.5" />
-              {language === 'en' ? 'Settings' : 'Postavke'}
+              <span className="hidden sm:inline">{language === 'en' ? 'Settings' : 'Postavke'}</span>
             </button>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <main className="flex flex-col items-center px-4 pt-16 pb-12 relative z-10">
-        <div className="text-center space-y-5 mb-12 max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-950/30 px-4.5 py-1.5 text-sm text-indigo-300 backdrop-blur-sm shadow-inner">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-            {t.badge}
-          </div>
-
-          <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight tracking-tight">
-            {t.title1}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-indigo-200 to-purple-400">{t.title2}</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-zinc-400 leading-relaxed max-w-2xl mx-auto">
-            {t.description}
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-zinc-400 pt-2">
-            {t.features.map((f) => (
-              <span key={f} className="flex items-center gap-1.5 bg-zinc-900/60 border border-zinc-800 rounded-full px-4 py-1.5 text-xs text-zinc-300">
-                <span className="text-green-500">✓</span> {f}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <section id="start" className="w-full max-w-6xl scroll-mt-24">
-          <div className="rounded-3xl border border-cyan-900/40 bg-zinc-950/70 p-5 shadow-2xl shadow-cyan-950/10 sm:p-6">
-            <div className="flex flex-col gap-4 border-b border-zinc-800 pb-5 sm:flex-row sm:items-start sm:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">{t.firstStepTitle}</p>
-                <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">
-                  {language === 'en' ? 'Start with one sharp business sentence.' : 'Kreni s jednom oštrom poslovnom rečenicom.'}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t.firstStepSubtitle}</p>
+      <main className="relative z-10 flex flex-col items-center px-4 pb-12 pt-4 sm:pt-6">
+        <section id="start" className="flex min-h-[calc(100vh-4.5rem)] w-full max-w-6xl scroll-mt-24 items-center">
+          <div className="w-full">
+            <div className="mx-auto max-w-4xl text-center">
+              <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-indigo-800/50 bg-indigo-950/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-300" />
+                {language === 'en' ? 'AI first validation' : 'AI prva validacija'}
               </div>
-              <div className="hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300 lg:block lg:max-w-[240px]">
-                <p className="font-semibold text-white">{t.localProfilePill}</p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">{t.stepHint}</p>
+              <h1 className="mt-5 text-[2.7rem] font-extrabold leading-[0.96] tracking-tight text-white sm:text-6xl md:text-7xl lg:text-[5.5rem]">
+                {t.title1}
+                <span className="bg-gradient-to-r from-indigo-400 via-indigo-200 to-purple-400 bg-clip-text text-transparent">{t.title2}</span>
+              </h1>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
+                {t.heroSubtitle}
+              </p>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+                {t.heroProof.map((item) => (
+                  <span key={item} className="rounded-full border border-zinc-800/80 bg-zinc-900/70 px-3.5 py-1.5 text-[11px] font-semibold text-zinc-200 shadow-lg shadow-black/10">
+                    {item}
+                  </span>
+                ))}
               </div>
             </div>
 
-            <div className="mt-5 space-y-4">
-            {hasStoredReport && (
-              <button
-                type="button"
-                onClick={() => router.push('/results')}
-                className="w-full rounded-2xl border border-emerald-800/50 bg-emerald-950/20 px-4 py-3 text-sm font-bold text-emerald-200 transition-colors hover:border-emerald-500 hover:text-white"
-              >
-                {t.continueReport}
-              </button>
-            )}
-              {loadingAudiences ? (
-                <div className="flex flex-col items-center gap-3 py-16">
-                  <span className="w-8 h-8 border-4 border-zinc-800 border-t-indigo-600 rounded-full animate-spin" />
-                  <span className="text-zinc-400 text-sm">{t.findingAudiences}</span>
+            <div className="mx-auto mt-8 max-w-6xl rounded-[2rem] border border-zinc-800/80 bg-zinc-950/75 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl sm:mt-10 sm:p-3">
+              <div className="rounded-[1.65rem] border border-white/5 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_34%),linear-gradient(180deg,rgba(24,24,27,0.96),rgba(10,10,12,0.94))] p-3 sm:p-5">
+              <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800/80 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
+                    {language === 'en' ? 'Start with one sentence' : 'Kreni s jednom recenicom'}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-300">
+                    {language === 'en'
+                      ? 'AI shapes the brief first, then opens the rest only when it helps.'
+                      : 'AI prvo slozi brief, pa otvara ostatak tek kad stvarno pomaze.'}
+                  </p>
                 </div>
-              ) : candidates ? (
-                <AudiencePicker
-                  language={language}
-                  segments={candidates}
-                  onConfirm={handleConfirmAudiences}
-                  onSkip={handleSkipAudiences}
-                  onBack={handleBackToForm}
-                />
-              ) : (
-                <IdeaForm onIdeaReady={handleIdeaReady} onError={handleError} />
-              )}
+                <div className="grid grid-cols-3 gap-2 text-center text-[11px] text-zinc-400 lg:min-w-[290px]">
+                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
+                    <div className="font-bold text-white">50</div>
+                    <div>persona</div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
+                    <div className="font-bold text-white">~30s</div>
+                    <div>{language === 'en' ? 'signal' : 'signal'}</div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
+                    <div className="font-bold text-white">7d</div>
+                    <div>{language === 'en' ? 'test' : 'test'}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {hasStoredReport && (
+                  <button
+                    type="button"
+                    onClick={() => router.push('/results')}
+                    className="w-full rounded-2xl border border-emerald-800/50 bg-emerald-950/20 px-4 py-3 text-sm font-bold text-emerald-200 transition-colors hover:border-emerald-500 hover:text-white"
+                  >
+                    {t.continueReport}
+                  </button>
+                )}
+                {loadingAudiences ? (
+                  <div className="flex flex-col items-center gap-3 py-16">
+                    <span className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-800 border-t-indigo-600" />
+                    <span className="text-sm text-zinc-400">{t.findingAudiences}</span>
+                  </div>
+                ) : candidates ? (
+                  <AudiencePicker
+                    language={language}
+                    segments={candidates}
+                    onConfirm={handleConfirmAudiences}
+                    onSkip={handleSkipAudiences}
+                    onBack={handleBackToForm}
+                  />
+                ) : (
+                  <IdeaForm onIdeaReady={handleIdeaReady} onError={handleError} />
+                )}
+              </div>
+              </div>
             </div>
           </div>
         </section>
@@ -421,23 +430,47 @@ export default function Home() {
           </div>
         )}
 
-        <section className="mt-12 w-full max-w-4xl space-y-4">
-          <div>
+        <section className="mt-10 w-full max-w-4xl space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.workspaceTitle}</h2>
             <p className="mt-1 text-sm leading-relaxed text-zinc-500">{t.workspaceSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleSection('workspace')}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
+            >
+              {isSectionExpanded('workspace') ? hideLabel : showLabel}
+              {isSectionExpanded('workspace') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
-          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className={`${isSectionExpanded('workspace') ? 'grid' : 'hidden'} gap-4 lg:grid-cols-[1.05fr_0.95fr]`}>
             <TokenWallet language={language} />
             <SetupStatus language={language} onOpenSettings={() => router.push('/settings')} />
           </div>
         </section>
 
         {/* Stats Counter Section */}
-        <section className="mt-20 max-w-4xl w-full border border-zinc-900 bg-zinc-950/40 rounded-2xl p-8 backdrop-blur-sm">
-          <div className="grid md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-zinc-800/50">
+        <section className="mt-20 w-full max-w-4xl rounded-2xl border border-zinc-900 bg-zinc-950/40 p-5 backdrop-blur-sm sm:p-8">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.howItWorks}</h2>
+              <p className="mt-1 text-sm text-zinc-500">{language === 'en' ? 'The shortest path from rough idea to the first real test.' : 'Najkraci put od sirove ideje do prvog stvarnog testa.'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleSection('stats')}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
+            >
+              {isSectionExpanded('stats') ? hideLabel : showLabel}
+              {isSectionExpanded('stats') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+          <div className={`${isSectionExpanded('stats') ? 'grid' : 'hidden'} mt-5 gap-6 text-center sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:gap-8 sm:divide-zinc-800/50`}>
             {t.stats.map(({ value, label }) => (
-              <div key={label} className="pt-4 md:pt-0">
-                <div className="text-4xl font-extrabold text-white font-title tracking-tight">{value}</div>
+              <div key={label} className="border-b border-zinc-800/50 pb-5 last:border-b-0 last:pb-0 sm:border-b-0 sm:pb-0">
+                <div className="font-title text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{value}</div>
                 <div className="text-sm text-zinc-500 mt-1">{label}</div>
               </div>
             ))}
@@ -446,12 +479,22 @@ export default function Home() {
 
         {/* Interactive Live Preview Mockup Dashboard */}
         <section className="mt-20 max-w-3xl w-full">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-bold text-white tracking-wide">{t.previewTitle}</h2>
-            <p className="text-sm text-zinc-500 mt-1">{t.previewSubtitle}</p>
+          <div className="mb-6 flex items-start justify-between gap-3 text-left sm:block sm:text-center">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-wide">{t.previewTitle}</h2>
+              <p className="mt-1 text-sm text-zinc-500">{t.previewSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleSection('preview')}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
+            >
+              {isSectionExpanded('preview') ? hideLabel : showLabel}
+              {isSectionExpanded('preview') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
           
-          <div className="w-full rounded-2xl bg-zinc-900/80 border border-zinc-800 shadow-2xl p-6 relative overflow-hidden backdrop-blur-md">
+          <div className={`${isSectionExpanded('preview') ? 'block' : 'hidden'} relative w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 shadow-2xl backdrop-blur-md sm:p-6`}>
             {/* Glossy top strip */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-zinc-800 pb-4 mb-4 gap-2">
               <div>
@@ -487,11 +530,11 @@ export default function Home() {
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <div className="flex justify-between font-semibold text-zinc-400">
-                      <span>1. Competition</span>
-                      <span>45%</span>
+                      <span>{language === 'en' ? '1. No proof yet' : '1. Jos nema dokaza'}</span>
+                      <span>41%</span>
                     </div>
                     <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
-                      <div className="bg-red-500 h-full rounded-full" style={{ width: '45%' }} />
+                      <div className="bg-red-500 h-full rounded-full" style={{ width: '41%' }} />
                     </div>
                   </div>
                   <blockquote className="border border-red-950/30 bg-red-950/10 px-3 py-2 rounded-lg italic text-zinc-400">
@@ -533,12 +576,22 @@ export default function Home() {
 
         {/* Pricing Plans Grid Section */}
         <section className="mt-24 max-w-4xl w-full">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white font-title tracking-tight">{t.pricingTitle}</h2>
-            <p className="text-sm text-zinc-500 mt-2 max-w-md mx-auto">{t.pricingSubtitle}</p>
+          <div className="mb-8 flex items-start justify-between gap-3 text-left sm:mb-10 sm:block sm:text-center">
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">{t.pricingTitle}</h2>
+              <p className="mt-2 max-w-md text-sm text-zinc-500 sm:mx-auto">{t.pricingSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleSection('pricing')}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
+            >
+              {isSectionExpanded('pricing') ? hideLabel : showLabel}
+              {isSectionExpanded('pricing') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-6 items-stretch">
+          <div className={`${isSectionExpanded('pricing') ? 'grid' : 'hidden'} gap-6 items-stretch md:grid-cols-3`}>
             {t.pricingPlans.map((plan) => (
               <div 
                 key={plan.name} 
@@ -594,12 +647,22 @@ export default function Home() {
 
         {/* Founder Testimonials */}
         <section className="mt-24 max-w-3xl w-full">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl font-extrabold text-white font-title tracking-tight">{t.testimonialsTitle}</h2>
-            <p className="text-sm text-zinc-500 mt-2">{t.testimonialsSubtitle}</p>
+          <div className="mb-8 flex items-start justify-between gap-3 text-left sm:mb-10 sm:block sm:text-center">
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight text-white">{t.testimonialsTitle}</h2>
+              <p className="mt-2 text-sm text-zinc-500">{t.testimonialsSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleSection('testimonials')}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
+            >
+              {isSectionExpanded('testimonials') ? hideLabel : showLabel}
+              {isSectionExpanded('testimonials') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className={`${isSectionExpanded('testimonials') ? 'grid' : 'hidden'} gap-6 md:grid-cols-2`}>
             {t.testimonials.map(({ quote, author }) => (
               <div key={author} className="rounded-xl border border-zinc-800 bg-zinc-900/10 p-6 flex flex-col justify-between backdrop-blur-sm relative">
                 <span className="absolute top-4 right-4 text-4xl text-zinc-800 font-serif leading-none pointer-events-none">&ldquo;</span>
@@ -616,8 +679,21 @@ export default function Home() {
 
         {/* Social proof / How it works */}
         <div className="mt-24 max-w-2xl w-full">
-          <p className="text-center text-xs text-zinc-500 uppercase tracking-widest mb-8">{t.howItWorks}</p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="mb-8 flex items-start justify-between gap-3 text-left sm:block sm:text-center">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-zinc-500">{t.howItWorks}</p>
+              <p className="mt-2 text-sm text-zinc-500">{language === 'en' ? 'A simple path from idea to action.' : 'Jednostavan put od ideje do konkretnog poteza.'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleSection('steps')}
+              className="inline-flex items-center gap-1 rounded-full border border-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
+            >
+              {isSectionExpanded('steps') ? hideLabel : showLabel}
+              {isSectionExpanded('steps') ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+          <div className={`${isSectionExpanded('steps') ? 'grid' : 'hidden'} gap-6 md:grid-cols-3`}>
             {t.steps.map(({ title, desc }, index) => (
               <div key={title} className="text-center space-y-2">
                 <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-indigo-400 font-bold mx-auto shadow-inner">

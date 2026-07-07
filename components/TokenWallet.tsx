@@ -92,7 +92,7 @@ export default function TokenWallet({ language, compact = false }: Props) {
 
   return (
     <div className={`rounded-xl border border-cyan-800/50 bg-cyan-950/20 ${compact ? 'px-3 py-2' : 'p-4'}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">{t.label}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -133,7 +133,7 @@ export default function TokenWallet({ language, compact = false }: Props) {
               setBalance(localBalance);
             }
           }}
-          className="rounded-lg border border-cyan-500/60 bg-cyan-400 px-3 py-2 text-xs font-black text-zinc-950 transition-colors hover:bg-cyan-300"
+          className="self-start rounded-lg border border-cyan-500/60 bg-cyan-400 px-3 py-2 text-xs font-black text-zinc-950 transition-colors hover:bg-cyan-300 sm:self-auto"
           title={t.added}
         >
           {t.add}

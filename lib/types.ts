@@ -313,6 +313,15 @@ export interface StrategyReview {
   created_at: string;
 }
 
+export interface NextExperiment {
+  hypothesis: string;
+  who_to_test: string;
+  where_to_find: string[];
+  outreach_message: string;
+  duration: string;
+  success_criteria: string[];
+}
+
 export interface ValidationReport {
   meta: {
     product_name: string;
@@ -345,6 +354,7 @@ export interface ValidationReport {
     marketing: string;
     pricing: string;
   };
+  next_experiment?: NextExperiment;
   /** Usporedba kako je ideju primio svaki ciljani segment (ako je test rađen po publikama) */
   segments?: AudienceSegment[];
   /** Van Westendorp analiza cijene (popunjava se on-demand na results stranici) */

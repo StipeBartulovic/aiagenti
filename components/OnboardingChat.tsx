@@ -23,7 +23,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
   const t = {
     hr: {
       title: 'Upoznajmo tvoj projekt',
-      subtitle: 'Ovo nije još jedna forma. Par odgovora pomaže savjetnicima da budu konkretniji za tvoju situaciju.',
+      subtitle: 'Par odgovora pomaze da Research i Positioning savjetnik krenu od tvog stvarnog konteksta, a ne od generickih pretpostavki.',
       placeholder: 'Tvoj odgovor...',
       send: 'Pošalji',
       thinking: 'Razmišljam...',
@@ -37,7 +37,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
     },
     en: {
       title: "Let's get to know your project",
-      subtitle: 'This is not another form. A few answers help advisors become more specific to your situation.',
+      subtitle: 'A few answers help the Research and Positioning advisors start from your real context instead of generic assumptions.',
       placeholder: 'Your answer...',
       send: 'Send',
       thinking: 'Thinking...',
@@ -112,23 +112,27 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
   };
 
   return (
-    <div className="max-w-2xl mx-auto w-full">
-      <div className="text-center mb-6">
-        <div className="inline-flex -space-x-2 mb-4">
-          {['🎯', '⚙️', '📣', '⚖️'].map((e, i) => (
+    <div className="mx-auto w-full max-w-3xl">
+      <div className="mb-6 rounded-[1.8rem] border border-zinc-800/80 bg-zinc-900/45 p-5 text-center shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
+        <div className="mb-4 inline-flex -space-x-2">
+          {['🤝', '📣'].map((e, i) => (
             <div
               key={i}
-              className="w-10 h-10 rounded-full bg-zinc-800 border-2 border-zinc-950 flex items-center justify-center text-base"
+              className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-zinc-950 bg-zinc-800 text-base"
             >
               {e}
             </div>
           ))}
         </div>
-        <h1 className="text-2xl font-bold text-white mb-1 font-title">{t.title}</h1>
+        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-indigo-800/50 bg-indigo-950/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-indigo-300" />
+          {language === 'en' ? 'Advisor setup' : 'Setup savjetnika'}
+        </div>
+        <h1 className="mb-1 mt-4 text-2xl font-bold text-white font-title">{t.title}</h1>
         <p className="text-zinc-400 text-sm leading-relaxed">{t.subtitle}</p>
         <div className="mt-4 grid gap-2 text-left sm:grid-cols-3">
           {[t.benefitOne, t.benefitTwo, t.benefitThree].map((benefit) => (
-            <div key={benefit} className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-300">
+            <div key={benefit} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-300">
               <span className="mr-1 text-indigo-300">✓</span>
               {benefit}
             </div>
@@ -145,7 +149,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
         </button>
       </div>
 
-      <div className="rounded-2xl bg-zinc-900/60 border border-zinc-800 flex flex-col h-[60vh]">
+      <div className="flex min-h-[60vh] flex-col rounded-[1.8rem] border border-zinc-800 bg-zinc-900/60 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:min-h-[58vh]">
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -155,7 +159,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[88%] sm:max-w-[80%] rounded-[1.4rem] px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                   m.role === 'user'
                     ? 'bg-indigo-600 text-white rounded-br-sm'
                     : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
@@ -189,7 +193,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
         </div>
 
         <div className="p-3 border-t border-zinc-800">
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -202,12 +206,12 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
               rows={1}
               disabled={finished || seeding}
               placeholder={t.placeholder}
-              className="flex-1 resize-none rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors text-sm max-h-32 disabled:opacity-50"
+              className="min-h-[50px] flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none max-h-32 disabled:opacity-50"
             />
             <button
               onClick={handleSend}
               disabled={sending || finished || seeding || !input.trim()}
-              className="px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-medium text-sm transition-colors cursor-pointer flex-shrink-0"
+              className="h-[50px] rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600 sm:flex-shrink-0"
             >
               {t.send}
             </button>

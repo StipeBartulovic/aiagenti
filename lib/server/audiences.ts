@@ -96,6 +96,7 @@ Return 3 candidate audiences that are genuinely DIFFERENT from each other (not t
 3. A different angle (different age, profession, region, or use-case).
 
 Each audience must be specific enough to generate realistic personas from. Tie regions to the founder's stated target market/country when given; if a selected geographic area is provided, use that area and nearby neighborhoods/cities as the region context instead of generic regions.
+For the MVP, prefer audiences that make sense for a solo founder validating a digital or SaaS product before MVP, unless the product context clearly points to local service, retail, or another offline model.
 
 PRODUCT:
 - Business model: ${idea.business_model}

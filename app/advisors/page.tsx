@@ -16,7 +16,7 @@ import TokenWallet from '@/components/TokenWallet';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
-import { Settings2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Menu, Settings2 } from 'lucide-react';
 import type {
   IdeaFormData,
   ValidationReport,
@@ -40,12 +40,13 @@ export default function AdvisorsPage() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [fatalError, setFatalError] = useState('');
+  const [showMobileUtilities, setShowMobileUtilities] = useState(false);
   const bootedRef = useRef(false);
 
   const t = {
     hr: {
       back: '← Natrag',
-      title: 'AI Savjetnici',
+      title: 'Next-step savjetnici',
       bootingTitle: 'Pripremam AI savjetnike',
       booting: 'Spajam projekt, izvještaj i memoriju. Ovo obično traje par sekundi.',
       noProjectTitle: 'Još nema projekta za savjetnike',
@@ -62,11 +63,18 @@ export default function AdvisorsPage() {
       localUnsaved: 'Čeka prvo spremanje',
       localError: 'Lokalno spremanje nije uspjelo',
       savedAt: (value: string) => `Zadnje spremanje: ${value}`,
-      subtitle: 'Jedan razgovor, više savjetnika i taskovi na jednom mjestu.',
+      subtitle: 'Najprije Research i Positioning smjer, pa tek onda ostali specijalisti ako zatrebaju.',
+      utilities: 'Alati i status',
+      hideUtilities: 'Sakrij',
+      showUtilities: 'Prikaži',
+      mobileHintTitle: 'Kreni od sljedeceg poteza',
+      mobileHintText: 'Na telefonu prvo otvori Research ili Positioning smjer u panelu, pa tek onda idi u plan i taskove.',
+      workspaceReady: 'Workspace je spreman',
+      workspaceReadyText: 'Projekt, memorija i razgovor su spojeni. Sve sto napravis ovdje sprema se lokalno uz ovaj projekt.',
     },
     en: {
       back: '← Back',
-      title: 'AI Advisors',
+      title: 'Next-step advisors',
       bootingTitle: 'Preparing AI advisors',
       booting: 'Connecting your project, report, and memory. This usually takes a few seconds.',
       noProjectTitle: 'No project for advisors yet',
@@ -83,7 +91,14 @@ export default function AdvisorsPage() {
       localUnsaved: 'Waiting for first save',
       localError: 'Local save failed',
       savedAt: (value: string) => `Last saved: ${value}`,
-      subtitle: 'One conversation, multiple advisors, and tasks in one place.',
+      subtitle: 'Start with Research and Positioning, then bring in the other specialists only when needed.',
+      utilities: 'Tools and status',
+      hideUtilities: 'Hide',
+      showUtilities: 'Show',
+      mobileHintTitle: 'Start from the next move',
+      mobileHintText: 'On phone, begin with the Research or Positioning path inside the panel before jumping into plan and tasks.',
+      workspaceReady: 'Workspace is ready',
+      workspaceReadyText: 'The project, memory, and conversation are connected. Everything you do here is saved locally with this project.',
     },
   }[language];
 
@@ -238,61 +253,77 @@ export default function AdvisorsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <nav className="border-b border-zinc-800 px-6 py-4 flex flex-col gap-3 sticky top-0 bg-zinc-950/90 backdrop-blur-sm z-10 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push(report ? '/results' : '/')}
-            className="text-zinc-400 hover:text-white transition-colors text-sm cursor-pointer"
-          >
-            {t.back}
-          </button>
-          <span className="text-zinc-700">|</span>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fillOpacity="0.9" />
-              </svg>
+      <nav className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur-sm sm:px-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                onClick={() => router.push(report ? '/results' : '/')}
+                className="text-zinc-400 hover:text-white transition-colors text-sm cursor-pointer"
+              >
+                {t.back}
+              </button>
+              <span className="text-zinc-700">|</span>
+              <div className="min-w-0 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 shadow-lg shadow-indigo-950/30">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fillOpacity="0.9" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-white">{t.title}</span>
+                  <p className="mt-0.5 text-xs text-zinc-500">{t.subtitle}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="font-semibold text-sm text-white">{t.title}</span>
-              <p className="hidden text-xs text-zinc-500 sm:block">{t.subtitle}</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowMobileUtilities((value) => !value)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white lg:hidden"
+            >
+              <Menu className="h-3.5 w-3.5" />
+              {showMobileUtilities ? t.hideUtilities : t.showUtilities}
+              {showMobileUtilities ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          <TokenWallet language={language} compact />
-          <button
-            type="button"
-            onClick={() => router.push('/settings')}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
-            title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            {language === 'en' ? 'Settings' : 'Postavke'}
-          </button>
-          <div
-            className={`rounded-xl border px-3 py-1.5 text-xs ${
-              saveState === 'saved'
-                ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-200'
-                : saveState === 'saving'
-                ? 'border-cyan-800/50 bg-cyan-950/30 text-cyan-100'
-                : saveState === 'error'
-                ? 'border-red-800/60 bg-red-950/30 text-red-200'
-                : 'border-zinc-800 bg-zinc-900 text-zinc-400'
-            }`}
-            title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
-          >
-            <span className="font-semibold">{localSaveLabel}</span>
-            {savedAtLabel && saveState === 'saved' && (
-              <span className="ml-2 hidden text-zinc-400 sm:inline">{savedAtLabel}</span>
-            )}
+
+          <div className={`${showMobileUtilities ? 'flex' : 'hidden'} flex-col gap-3 rounded-[1.6rem] border border-zinc-800/80 bg-zinc-900/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.14)] lg:flex lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <TokenWallet language={language} compact />
+              <button
+                type="button"
+                onClick={() => router.push('/settings')}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                {language === 'en' ? 'Settings' : 'Postavke'}
+              </button>
+            </div>
+            <div
+              className={`rounded-xl border px-3 py-2 text-xs ${
+                saveState === 'saved'
+                  ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-200'
+                  : saveState === 'saving'
+                  ? 'border-cyan-800/50 bg-cyan-950/30 text-cyan-100'
+                  : saveState === 'error'
+                  ? 'border-red-800/60 bg-red-950/30 text-red-200'
+                  : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+              }`}
+              title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
+            >
+              <span className="font-semibold">{localSaveLabel}</span>
+              {savedAtLabel && saveState === 'saved' && (
+                <span className="ml-2 hidden text-zinc-400 sm:inline">{savedAtLabel}</span>
+              )}
+            </div>
           </div>
         </div>
       </nav>
 
-      <main className="px-4 py-8">
+      <main className="px-4 py-6 sm:py-8">
         {!idea ? (
-          <div className="mx-auto max-w-xl rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8 text-center shadow-2xl shadow-zinc-950/30">
+          <div className="mx-auto max-w-xl rounded-[1.8rem] border border-zinc-800 bg-zinc-900/70 p-8 text-center shadow-2xl shadow-zinc-950/30">
             <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600/15 text-indigo-200">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -350,15 +381,43 @@ export default function AdvisorsPage() {
             )}
           </div>
         ) : (
-          <PanelChat
-            language={language}
-            knowledge={knowledge}
-            initialMessages={panel}
-            initialTasks={tasks}
-            onPersistPanel={handlePersistPanel}
-            onKnowledgeUpdate={handleKnowledgeUpdate}
-            onPersistTasks={handlePersistTasks}
-          />
+          <div className="space-y-4">
+            <div className="rounded-[1.4rem] border border-emerald-900/40 bg-emerald-950/10 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-emerald-100">{t.workspaceReady}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">{t.workspaceReadyText}</p>
+                </div>
+                <div
+                  className={`rounded-xl border px-3 py-2 text-xs ${
+                    saveState === 'saved'
+                      ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-200'
+                      : saveState === 'saving'
+                      ? 'border-cyan-800/50 bg-cyan-950/30 text-cyan-100'
+                      : saveState === 'error'
+                      ? 'border-red-800/60 bg-red-950/30 text-red-200'
+                      : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+                  }`}
+                  title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
+                >
+                  <span className="font-semibold">{localSaveLabel}</span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-[1.4rem] border border-cyan-900/40 bg-cyan-950/10 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.12)] lg:hidden">
+              <p className="text-sm font-bold text-cyan-100">{t.mobileHintTitle}</p>
+              <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">{t.mobileHintText}</p>
+            </div>
+            <PanelChat
+              language={language}
+              knowledge={knowledge}
+              initialMessages={panel}
+              initialTasks={tasks}
+              onPersistPanel={handlePersistPanel}
+              onKnowledgeUpdate={handleKnowledgeUpdate}
+              onPersistTasks={handlePersistTasks}
+            />
+          </div>
         )}
       </main>
     </div>

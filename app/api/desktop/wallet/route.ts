@@ -4,6 +4,7 @@ import {
   readDesktopAccountId,
   verifyDesktopSecret,
 } from '@/lib/server/desktop-billing';
+import { parseAndSanitizeJson } from '@/lib/server/api-guard';
 import { errorPayload } from '@/lib/server/errors';
 
 export const runtime = 'nodejs';
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   try {
     verifyDesktopSecret(request.headers);
     const accountId = readDesktopAccountId(request.headers);
-    const body: WalletRequest = await request.json();
+    const body = await parseAndSanitizeJson<WalletRequest>(request);
     if (body.action === 'top_up') {
       return Response.json(await addDesktopWalletTokens(accountId, Number(body.euros ?? 0)));
     }

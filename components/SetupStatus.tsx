@@ -119,7 +119,7 @@ export default function SetupStatus({ language, compact = false, onOpenSettings 
 
   return (
     <section className={`rounded-2xl border border-zinc-800 bg-zinc-900/70 ${compact ? 'p-4' : 'p-5'}`}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-600/20 text-cyan-300">
@@ -135,7 +135,7 @@ export default function SetupStatus({ language, compact = false, onOpenSettings 
           <button
             type="button"
             onClick={onOpenSettings}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+            className="inline-flex items-center gap-1.5 self-start rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
           >
             <CircleHelp className="h-3.5 w-3.5" />
             {t.openSettings}

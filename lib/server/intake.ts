@@ -41,26 +41,26 @@ function deterministicIntakeStep(
   const allUserText = normalizeText(transcript.filter((m) => m.role === 'user').map((m) => m.content).join(' '));
 
   const hrSteps = [
-    'Bok! Krenimo jednostavno: u kojoj državi i regiji planiraš raditi ovaj posao?',
-    'Super, imam lokaciju. U kojoj si fazi trenutno: samo ideja, dogovaraš prve klijente, već radiš uslugu ili već imaš prihod?',
-    'Kako trenutno planiraš izvoditi posao: radiš sam, imaš tim/partnere ili bi dio posla outsourceao?',
-    'Koliki okvirni mjesečni budžet možeš odvojiti za marketing, obilazak terena ili prve prodajne pokušaje?',
-    'Koji ti je glavni cilj u idućih 6 mjeseci: prvi klijenti, širenje na nove gradove, veća cijena, bolja operativa ili nešto drugo?',
-    'Što ti je trenutno najveća nepoznanica ili strah oko ove ideje?',
+    'Bok! Krenimo jednostavno: u kojoj drzavi gradis ovaj proizvod i kome ga prvo planiras prodavati?',
+    'Super. U kojoj si fazi trenutno: samo ideja, customer intervjui, landing page test, gradnja MVP-a ili vec imas prve korisnike?',
+    'Radis li ovo solo, s co-founderom ili s vanjskim timom?',
+    'Koji kanal trenutno najvise planiras testirati za prvi signal: osobni outreach, community, content, oglasi ili nesto peto?',
+    'Koji ti je glavni cilj u iducih 6 mjeseci: prvi placeni korisnici, vise intervjua, waitlist, pilot ili fundraising?',
+    'Sto ti je trenutno najveca nepoznanica ili strah: tko kupuje, zasto bi platio, kako doci do ljudi ili nesto cetvrto?',
   ];
 
   const enSteps = [
-    'Hi! Let us start simple: which country and region are you building this in?',
-    'Great, I have the location. What stage are you in right now: just an idea, talking to first customers, already delivering the service, or already making revenue?',
-    'How do you plan to deliver this operationally: solo, with a team/partners, or by outsourcing part of the work?',
-    'What rough monthly budget can you put toward marketing, field visits, or first sales attempts?',
-    'What is your main goal for the next 6 months: first customers, expansion, higher pricing, smoother operations, or something else?',
-    'What is the biggest unknown or worry you still have about this idea?',
+    'Hi! Let us start simple: which country are you building this in, and who do you want to sell to first?',
+    'Great. What stage are you in right now: just an idea, customer interviews, landing page testing, building the MVP, or already getting first users?',
+    'Are you doing this solo, with a co-founder, or with outside help?',
+    'Which channel are you most likely to test first for a real signal: personal outreach, community, content, paid ads, or something else?',
+    'What is your main goal for the next 6 months: first paying users, more interviews, a waitlist, a pilot, or fundraising?',
+    'What is the biggest unknown or fear right now: who buys, why they would pay, how to reach them, or something else?',
   ];
 
   const wrap = language === 'en'
-    ? 'That is enough context for now. I will prepare your AI advisors so they can focus on concrete next steps instead of generic advice.'
-    : 'To je dovoljno konteksta za sada. Pripremam tvoje AI savjetnike da krenu s konkretnim sljedećim koracima, a ne generičkim savjetima.';
+    ? 'That is enough context for now. I will prepare the advisors so they can focus on your next experiment, positioning, and real-world proof instead of generic advice.'
+    : 'To je dovoljno konteksta za sada. Pripremam savjetnike da se fokusiraju na tvoj sljedeci eksperiment, positioning i stvarni dokaz umjesto generickih savjeta.';
 
   if (userAnswers >= 5) return { message: wrap, done: true };
 
@@ -80,15 +80,16 @@ export async function runIntake(body: IntakeRequest): Promise<IntakeResult> {
   const langName = body.language === 'en' ? 'English' : 'Croatian';
   const userAnswers = body.transcript.filter((m) => m.role === 'user').length;
 
-  const systemPrompt = `You are the warm, sharp intake host for "AI Validator". Before the founder meets their 4 AI advisors (a business mentor, a CTO, a growth marketer, and a legal/accounting expert), you run a short, natural CONVERSATION to gather context. You are NOT a form — you talk like a smart friend, drawing conclusions from what they say.
+  const systemPrompt = `You are the warm, sharp intake host for "AI Validator". Before the founder meets the next-step advisors, you run a short, natural CONVERSATION to gather context. You are NOT a form - you talk like a smart friend, drawing conclusions from what they say.
 
 WHAT THE ADVISORS NEED TO KNOW (cover these, but conversationally — skip anything already answered):
 - Country / jurisdiction they're building in
-- Their technical situation (solo dev / has a team / outsourcing / nothing built)
-- Stage (idea / building MVP / launched / has users or revenue)
-- Rough monthly budget for marketing/ads
+- Their build situation (solo / co-founder / outsourcing / nothing built)
+- Stage (idea / interviews / waitlist / MVP / first users or revenue)
+- First realistic buyer or segment
+- First channel they are likely to test
 - Main goal for the next 6 months
-- Any gap in the core idea itself that's still fuzzy
+- Biggest unknown around demand, positioning, pricing, or reach
 
 WHAT YOU ALREADY KNOW ABOUT THE PROJECT (do NOT ask about these):
 ${body.ideaSummary}

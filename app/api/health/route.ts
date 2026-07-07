@@ -17,8 +17,7 @@ export async function GET() {
   };
 
   return Response.json({
-    ok: checks.deepseek,
-    checks,
+    ok: checks.deepseek && checks.tavily,
     timestamp: new Date().toISOString(),
   });
 }

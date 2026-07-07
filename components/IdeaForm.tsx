@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { FileText } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import AreaMapPicker from '@/components/AreaMapPicker';
 import { aiClient } from '@/lib/ai-client';
@@ -37,9 +38,13 @@ interface IdeaBriefResult {
 
 export default function IdeaForm({ onIdeaReady, onError }: Props) {
   const { language } = useAuth();
+  const [formUnlocked, setFormUnlocked] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showOfficeHours, setShowOfficeHours] = useState(false);
   const [initialBrief, setInitialBrief] = useState('');
+  const [briefGhostText, setBriefGhostText] = useState('');
+  const [exampleFieldHints, setExampleFieldHints] = useState<Partial<Record<keyof IdeaFormData, string>>>({});
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [isPreparingBrief, setIsPreparingBrief] = useState(false);
   const [briefError, setBriefError] = useState('');
   const [documentName, setDocumentName] = useState('');
@@ -66,9 +71,21 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
     discovery_answers: [],
   });
 
+  const clearExampleHint = (field: keyof IdeaFormData) => {
+    setExampleFieldHints((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  };
+
   const set = (field: keyof IdeaFormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  ) => {
+    clearExampleHint(field);
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
 
   const readFileText = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -150,37 +167,48 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
 
   const fillExample = () => {
     const exampleBrief = language === 'en'
-      ? 'We install energy-efficient windows for homeowners and small landlords in Zagreb, including measurement, delivery, installation, and warranty.'
-      : 'Postavljamo energetski učinkovite prozore za vlasnike kuća i male najmodavce u Zagrebu, uključujući izmjeru, dostavu, montažu i garanciju.';
-    setInitialBrief(exampleBrief);
-    setInferredCategory(language === 'en' ? 'Local service' : 'Lokalna usluga');
+      ? 'We are building a SaaS tool for solo founders that turns customer interviews, waitlist signups, and landing page feedback into one simple validation dashboard before they build an MVP.'
+      : 'Gradimo SaaS alat za solo foundere koji spaja customer intervjue, waitlist prijave i feedback s landing pagea u jedan jednostavan validation dashboard prije gradnje MVP-a.';
+    setInitialBrief('');
+    setBriefGhostText(exampleBrief);
+    setInferredCategory(language === 'en' ? 'Founder SaaS' : 'Founder SaaS');
     setAiGuidance(language === 'en'
-      ? 'Example filled. Change any field so it matches your real business, then run the validation.'
-      : 'Primjer je popunjen. Promijeni bilo koje polje da odgovara tvom stvarnom biznisu, pa pokreni validaciju.');
+      ? 'Example hints are loaded. Click any field and start typing your real version.'
+      : 'Primjer je ucitan kao hint. Klikni bilo koje polje i odmah upisi svoju stvarnu verziju.');
     setAdaptiveQuestions([]);
     setShowAdvanced(false);
+    setFormUnlocked(true);
+    setExampleFieldHints({
+      product_name: 'SignalBoard',
+      elevator_pitch: language === 'en'
+        ? 'A SaaS workspace for solo founders that shows which customer signals are real before they spend weeks building an MVP.'
+        : 'SaaS workspace za solo foundere koji pokazuje koji su customer signali stvarni prije nego potrose tjedne na gradnju MVP-a.',
+      detailed_description: language === 'en'
+        ? 'The founder uploads interview notes, waitlist replies, and landing page feedback. The product clusters objections, highlights buying signals, tracks confidence by segment, and suggests the next 7-day validation experiment. Buyers care most about clarity, speed, and whether it saves them from building the wrong thing.'
+        : 'Founder ubacuje interview biljeske, waitlist odgovore i feedback s landing pagea. Proizvod grupira prigovore, istice kupovne signale, prati confidence po segmentu i predlaze sljedeci 7-dnevni validation eksperiment. Kupcima su najvazniji jasnoca, brzina i to da ne grade pogresnu stvar.',
+      price_model: language === 'en'
+        ? 'Free for one idea, then 29 EUR per month or 79 EUR for a guided validation sprint.'
+        : 'Besplatno za jednu ideju, zatim 29 EUR mjesecno ili 79 EUR za vodeni validation sprint.',
+      target_market: language === 'en' ? 'English-speaking solo founders building SaaS before MVP' : 'Solo founderi koji grade SaaS prije MVP-a',
+      assumed_customer: language === 'en'
+        ? 'Solo founders and indie hackers who already have a rough idea, a few conversations, and need to decide what to test next.'
+        : 'Solo founderi i indie hakkeri koji vec imaju sirovu ideju, nekoliko razgovora i trebaju odluciti sto dalje testirati.',
+      competitors: language === 'en'
+        ? 'Idea validation tools, founder communities, spreadsheets, Notion docs, ChatGPT, and manual interview notes.'
+        : 'Alati za validaciju ideje, founder communityji, spreadsheeti, Notion dokumenti, ChatGPT i rucne interview biljeske.',
+    });
     setForm((prev) => ({
       ...prev,
       business_model: 'B2C',
-      product_name: language === 'en' ? 'Zagreb Window Installers' : 'Zagreb Prozori',
-      elevator_pitch: language === 'en'
-        ? 'A local window-installation service that helps homeowners reduce heating costs with measurement, installation, and warranty included.'
-        : 'Lokalna usluga montaže prozora koja vlasnicima kuća smanjuje troškove grijanja kroz izmjeru, montažu i garanciju.',
-      detailed_description: language === 'en'
-        ? 'We visit the property, measure windows, recommend energy-efficient options, deliver materials, install the windows, remove old ones, and provide a clear warranty. Customers usually worry about price, trust, mess during installation, and whether savings justify the cost.'
-        : 'Dolazimo na adresu, mjerimo prozore, predlažemo energetski učinkovite opcije, dostavljamo materijal, montiramo prozore, odvozimo stare i dajemo jasnu garanciju. Kupce najviše brinu cijena, povjerenje, nered tijekom montaže i isplati li se ušteda na grijanju.',
-      price_model: language === 'en'
-        ? 'Free measurement, then fixed quote per project; typical job 1,200-6,000 EUR depending on number of windows.'
-        : 'Besplatna izmjera, zatim fiksna ponuda po projektu; tipičan posao 1.200-6.000 EUR ovisno o broju prozora.',
-      target_market: language === 'en' ? 'Zagreb and nearby towns' : 'Zagreb i okolica',
-      assumed_customer: language === 'en'
-        ? 'Homeowners age 35-65 and small landlords renovating apartments.'
-        : 'Vlasnici kuća 35-65 godina i mali najmodavci koji renoviraju stanove.',
-      competitors: language === 'en'
-        ? 'Local installers, hardware stores, referrals, large window manufacturers.'
-        : 'Lokalni majstori, trgovine građevinskog materijala, preporuke, veći proizvođači prozora.',
+      product_name: '',
+      elevator_pitch: '',
+      detailed_description: '',
+      price_model: '',
+      target_market: '',
+      assumed_customer: '',
+      competitors: '',
       initial_brief: exampleBrief,
-      inferred_category: language === 'en' ? 'Local service' : 'Lokalna usluga',
+      inferred_category: language === 'en' ? 'Founder SaaS' : 'Founder SaaS',
       adaptive_answers: [],
     }));
   };
@@ -192,8 +220,19 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
       return;
     }
 
+    const isNewBrief = (form.initial_brief || '').trim() !== brief;
+
     setIsPreparingBrief(true);
     setBriefError('');
+    setBriefGhostText('');
+    setFormUnlocked(true);
+    setExampleFieldHints({});
+    setAiGuidance('');
+    setAdaptiveQuestions([]);
+    setShowAdvanced(false);
+    if (isNewBrief) {
+      setInferredCategory('');
+    }
 
     try {
       const result = await aiClient.createIdeaBrief<IdeaBriefResult>(
@@ -207,18 +246,20 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
 
       setForm((prev) => ({
         ...prev,
-        business_model: result.business_model || prev.business_model,
-        product_name: prev.product_name || result.product_name || '',
-        elevator_pitch: result.elevator_pitch || prev.elevator_pitch || brief,
-        detailed_description: prev.detailed_description || result.detailed_description || '',
-        b2b2c_consumer_description: prev.b2b2c_consumer_description || result.b2b2c_consumer_description || '',
-        b2b2c_business_description: prev.b2b2c_business_description || result.b2b2c_business_description || '',
-        price_model: prev.price_model || result.price_model || '',
-        target_market: prev.target_market || result.target_market || '',
-        assumed_customer: prev.assumed_customer || result.assumed_customer || '',
-        competitors: prev.competitors || result.competitors || '',
+        business_model: result.business_model || (isNewBrief ? 'B2C' : prev.business_model),
+        product_name: isNewBrief ? (result.product_name || '') : (prev.product_name || result.product_name || ''),
+        elevator_pitch: isNewBrief ? (result.elevator_pitch || brief) : (result.elevator_pitch || prev.elevator_pitch || brief),
+        detailed_description: isNewBrief ? (result.detailed_description || '') : (prev.detailed_description || result.detailed_description || ''),
+        b2b2c_consumer_description: isNewBrief ? (result.b2b2c_consumer_description || '') : (prev.b2b2c_consumer_description || result.b2b2c_consumer_description || ''),
+        b2b2c_business_description: isNewBrief ? (result.b2b2c_business_description || '') : (prev.b2b2c_business_description || result.b2b2c_business_description || ''),
+        price_model: isNewBrief ? (result.price_model || '') : (prev.price_model || result.price_model || ''),
+        target_market: isNewBrief ? (result.target_market || '') : (prev.target_market || result.target_market || ''),
+        assumed_customer: isNewBrief ? (result.assumed_customer || '') : (prev.assumed_customer || result.assumed_customer || ''),
+        competitors: isNewBrief ? (result.competitors || '') : (prev.competitors || result.competitors || ''),
         initial_brief: brief,
         inferred_category: result.category_label,
+        adaptive_answers: isNewBrief ? [] : prev.adaptive_answers,
+        discovery_answers: isNewBrief ? [] : prev.discovery_answers,
       }));
     } catch (err) {
       setBriefError(err instanceof Error ? err.message : language === 'en' ? 'Could not prepare the form.' : 'Nisam uspio pripremiti formu.');
@@ -298,7 +339,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
   const officeHours = {
     hr: {
       title: 'Founder Office Hours',
-      subtitle: 'Nije obavezno, ali jako poboljšava simulaciju. Ovo su pitanja koja bi ti dobar investitor ili customer-discovery coach postavio prije testa.',
+      subtitle: 'Opcionalno. Par pitanja koja izostre ideju prije testa.',
       show: 'Naoštri ideju prije validacije',
       hide: 'Sakrij Office Hours',
       placeholder: 'Konkretan odgovor, bez marketinga...',
@@ -337,7 +378,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
     },
     en: {
       title: 'Founder Office Hours',
-      subtitle: 'Optional, but it makes the simulation much sharper. These are the questions a strong investor or customer-discovery coach would ask before the test.',
+      subtitle: 'Optional. A few questions that sharpen the idea before the test.',
       show: 'Sharpen the idea before validation',
       hide: 'Hide Office Hours',
       placeholder: 'Concrete answer, no marketing...',
@@ -383,51 +424,55 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
   const ui = {
     hr: {
       basicsTitle: 'Osnovno za validaciju',
-      basicsSubtitle: 'Ova polja su dovoljna za prvi test. Ako ne znaš savršeno odgovoriti, napiši najbolju trenutnu pretpostavku.',
+      basicsSubtitle: 'Dovoljno za prvi test. Ako nisi siguran, napiši najbolju trenutnu pretpostavku.',
       businessModel: 'Model poslovanja',
       productName: 'Naziv proizvoda',
       pitch: 'Elevator pitch — jedna rečenica',
       detailed: 'Detaljni opis — što rješava i kako',
-      detailedHelp: 'Dovoljno je 3-5 rečenica: problem, za koga je, kako radi i zašto bi netko vjerovao.',
+      detailedHelp: '3-5 recenica je dovoljno.',
       price: 'Cijena i model naplate',
-      priceHelp: 'Ako ne znaš točnu cijenu, napiši pretpostavku ili raspon. AI će svejedno testirati reakciju.',
-      advancedShow: 'Dodaj napredne informacije (opcionalno)',
+      priceHelp: 'Ako ne znas tocno, upisi pretpostavku ili raspon.',
+      advancedShow: 'Dodaj jos detalja (opcionalno)',
       advancedHide: 'Sakrij napredna polja',
       example: 'Popuni primjer',
-      exampleHint: 'Nemaš spreman tekst? Kreni od primjera i prepravi ga.',
       targetMarket: 'Ciljano tržište / regija',
       competitors: 'Konkurencija (ako postoji)',
       submit: 'Analiziraj ideju',
       footer: 'Besplatno · 50 simuliranih kupaca · ~30 sekundi',
+      unlockManual: 'Kreni',
+      uploadShow: 'Dodaj dokument o svojoj ideji',
+      uploadHide: 'Sakrij dokument',
       readyTitle: 'Spremno za simulaciju',
       missingTitle: 'Još samo malo',
-      readyHelp: 'Imaš dovoljno informacija za prvi test. Dodatna polja ispod su opcionalna.',
-      missingHelp: 'Popuni obavezna polja označena zvjezdicom. Ne mora biti savršeno — treba biti dovoljno konkretno.',
+      readyHelp: 'Imas dovoljno za prvi test.',
+      missingHelp: 'Popuni obavezna polja. Ne mora biti savrseno, samo dovoljno jasno.',
       missingCount: 'obavezna polja nedostaju',
       modelLabels: { B2C: 'B2C (Kupci)', B2B: 'B2B (Tvrtke)', B2B2C: 'B2B2C (Oboje)' },
     },
     en: {
       basicsTitle: 'Basics for validation',
-      basicsSubtitle: "These fields are enough for the first test. If you're not sure, write your best current assumption.",
+      basicsSubtitle: "Enough for the first test. If you're unsure, write your best current assumption.",
       businessModel: 'Business model',
       productName: 'Product name',
       pitch: 'Elevator pitch — one sentence',
       detailed: 'Detailed description — what it solves and how',
-      detailedHelp: '3-5 sentences are enough: problem, who it is for, how it works, and why someone would trust it.',
+      detailedHelp: '3-5 sentences are enough.',
       price: 'Price and billing model',
-      priceHelp: 'If you do not know the exact price, write an assumption or range. AI can still test the reaction.',
-      advancedShow: 'Add advanced information (optional)',
+      priceHelp: 'If you do not know the price, enter an assumption or range.',
+      advancedShow: 'Add more detail (optional)',
       advancedHide: 'Hide advanced fields',
       example: 'Fill example',
-      exampleHint: 'No text ready? Start from an example and edit it.',
       targetMarket: 'Target market / region',
       competitors: 'Competition (if any)',
       submit: 'Analyze idea',
       footer: 'Free · 50 simulated buyers · ~30 seconds',
+      unlockManual: 'Start',
+      uploadShow: 'Add a document about your idea',
+      uploadHide: 'Hide document',
       readyTitle: 'Ready for simulation',
       missingTitle: 'Almost there',
-      readyHelp: 'You have enough information for the first test. Extra fields below are optional.',
-      missingHelp: 'Fill the required fields marked with an asterisk. It does not need to be perfect, just concrete enough.',
+      readyHelp: 'You have enough for the first test.',
+      missingHelp: 'Fill the required fields. It does not need to be perfect, just clear enough.',
       missingCount: 'required fields missing',
       modelLabels: { B2C: 'B2C (Consumers)', B2B: 'B2B (Businesses)', B2B2C: 'B2B2C (Both)' },
     },
@@ -448,115 +493,82 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-none space-y-4">
-      <section className="rounded-2xl border border-cyan-900/50 bg-gradient-to-br from-cyan-950/30 via-zinc-950 to-zinc-950 p-4 shadow-[0_0_40px_rgba(8,145,178,0.08)]">
-        <div className="flex items-start justify-between gap-4 mb-3">
+      <section className="rounded-[1.6rem] border border-zinc-800/70 bg-zinc-900/35 p-4 shadow-[0_30px_80px_rgba(0,0,0,0.18)] sm:p-5">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">
-              {language === 'en' ? 'AI first step' : 'AI prvi korak'}
-            </p>
-            <h2 className="mt-1 text-lg font-bold text-zinc-100">
-              {language === 'en' ? 'Describe what you do, then the form adapts.' : 'Napiši čime se baviš, pa se forma prilagodi.'}
-            </h2>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-              {language === 'en'
-                ? 'A fintech startup, SaaS, local shop, service business, and marketplace should not answer the same questions.'
-                : 'Fintech startup, SaaS, lokalna trgovina, uslužna firma i marketplace ne trebaju ista pitanja.'}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">AI PRVI KORAK</p>
+            <p className="mt-1 text-sm font-medium text-zinc-300">
+              {language === 'en' ? 'Write the idea in one sharp sentence.' : 'Napisi ideju u jednoj ostroj recenici.'}
             </p>
           </div>
-          {inferredCategory && (
-            <span className="shrink-0 rounded-full border border-cyan-700/60 bg-cyan-950/40 px-3 py-1 text-xs font-semibold text-cyan-100">
-              {inferredCategory}
-            </span>
-          )}
-        </div>
-
-        <textarea
-          value={initialBrief}
-          onChange={(event) => setInitialBrief(event.target.value)}
-          rows={3}
-          placeholder={
-            language === 'en'
-              ? 'Example: We install energy-efficient windows for homeowners in Zagreb, including measurement, delivery, and warranty.'
-              : 'npr. Postavljamo energetski učinkovite prozore za vlasnike kuća u Zagrebu, uključujući izmjeru, dostavu i garanciju.'
-          }
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-950/80 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-600 focus:border-cyan-500 focus:outline-none resize-none"
-        />
-
-        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/55 p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-bold text-zinc-200">
-                {language === 'en' ? 'Project document (optional)' : 'Dokument projekta (opcionalno)'}
-              </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
-                {language === 'en'
-                  ? 'Attach a pitch, business description, notes, PDF, DOC/DOCX, TXT or MD. Text files are read cleanly; PDFs/DOCs are best-effort for now.'
-                  : 'Dodaj pitch, opis poslovanja, biljeske, PDF, DOC/DOCX, TXT ili MD. Tekst datoteke se citaju cisto; PDF/DOC je zasad best-effort.'}
-              </p>
-            </div>
-            <label className="shrink-0 cursor-pointer rounded-xl border border-cyan-800/70 bg-cyan-950/25 px-4 py-2 text-xs font-bold text-cyan-100 transition-colors hover:border-cyan-400 hover:text-white">
-              {language === 'en' ? 'Attach file' : 'Dodaj file'}
-              <input
-                type="file"
-                accept=".txt,.md,.markdown,.pdf,.doc,.docx,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*"
-                className="hidden"
-                onChange={handleDocumentUpload}
-              />
-            </label>
-          </div>
-          {documentName && (
-            <div className="mt-3 flex flex-col gap-2 rounded-lg border border-cyan-900/40 bg-cyan-950/15 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="truncate text-xs font-semibold text-cyan-100">
-                {language === 'en' ? 'Attached:' : 'Dodano:'} {documentName}
-              </p>
-              <button
-                type="button"
-                onClick={clearDocumentUpload}
-                className="text-left text-xs font-bold text-zinc-400 hover:text-red-300 sm:text-right"
-              >
-                {language === 'en' ? 'Remove' : 'Ukloni'}
-              </button>
-            </div>
-          )}
-          {documentError && <p className="mt-2 text-xs text-red-300">{documentError}</p>}
-        </div>
-
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={prepareFromBrief}
-            disabled={isPreparingBrief}
-            className="rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-bold text-zinc-950 transition-colors hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPreparingBrief
-              ? language === 'en' ? 'Preparing form...' : 'Pripremam formu...'
-              : language === 'en' ? 'Prepare smart form' : 'Pripremi pametnu formu'}
-          </button>
           <button
             type="button"
             onClick={fillExample}
             disabled={isPreparingBrief}
-            className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm font-bold text-zinc-200 transition-colors hover:border-cyan-700 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="self-start rounded-full border border-zinc-700 bg-zinc-900/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {ui.example}
+            {language === 'en' ? 'Use example' : 'Primjer'}
           </button>
-          <p className="text-xs text-zinc-500">
-            {language === 'en'
-              ? 'You can still manually change B2B/B2C, price, market, and every answer.'
-              : 'I dalje možeš ručno promijeniti B2B/B2C, cijenu, tržište i svaki odgovor.'}
-          </p>
         </div>
-        <p className="mt-2 text-[11px] text-zinc-600">{ui.exampleHint}</p>
+
+        <div className="relative rounded-[1.4rem] border border-indigo-900/40 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.10),_transparent_40%),rgba(9,9,11,0.86)] p-3 sm:p-4">
+          <textarea
+            value={initialBrief}
+            onFocus={() => {
+              if (briefGhostText) setBriefGhostText('');
+            }}
+            onChange={(event) => {
+              setInitialBrief(event.target.value);
+              if (briefGhostText) setBriefGhostText('');
+              if (briefError) setBriefError('');
+            }}
+            rows={3}
+            placeholder={
+              briefGhostText || (
+                language === 'en'
+                  ? 'Describe your idea in one sentence...'
+                  : 'Opiši ideju u jednoj rečenici...'
+              )
+            }
+            className="w-full resize-none rounded-[1.2rem] border border-zinc-800/80 bg-zinc-950/90 px-4 py-4 text-base text-zinc-100 placeholder-zinc-500 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none sm:min-h-[132px] sm:pr-36"
+          />
+          <button
+            type="button"
+            onClick={prepareFromBrief}
+            disabled={isPreparingBrief}
+            className="mt-3 w-full rounded-[1rem] bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-950/40 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:absolute sm:bottom-4 sm:right-4 sm:mt-0 sm:w-auto"
+          >
+            {isPreparingBrief
+              ? language === 'en' ? 'Preparing...' : 'Pripremam...'
+              : ui.unlockManual}
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs">
+          <button
+            type="button"
+            onClick={prepareFromBrief}
+            disabled={isPreparingBrief}
+            className="rounded-full border border-zinc-800 bg-zinc-950/50 px-3 py-1.5 font-semibold text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPreparingBrief
+              ? language === 'en' ? 'Preparing...' : 'Pripremam...'
+              : language === 'en' ? 'AI fill' : 'AI ispuni'}
+          </button>
+          <span className="text-zinc-700">•</span>
+          <span className="text-zinc-500">
+            {language === 'en' ? 'The rest opens after this step.' : 'Ostatak se otvara nakon ovog koraka.'}
+          </span>
+        </div>
 
         {briefError && <p className="mt-2 text-sm text-red-300">{briefError}</p>}
-        {aiGuidance && (
-          <div className="mt-3 rounded-xl border border-cyan-900/50 bg-cyan-950/15 p-3 text-sm leading-relaxed text-cyan-50">
-            {aiGuidance}
-          </div>
-        )}
       </section>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+      {formUnlocked && (
+      <>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_320px] xl:items-start">
+      <div className="space-y-4">
+      <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/45 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-bold text-white">{ui.basicsTitle}</p>
@@ -578,7 +590,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
           <label className="block text-sm font-medium text-zinc-300 mb-2">
             {ui.businessModel} <span className="text-indigo-400">*</span>
           </label>
-          <div className="grid grid-cols-3 gap-2 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+          <div className="grid grid-cols-1 gap-2 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1 sm:grid-cols-3">
             {(['B2C', 'B2B', 'B2B2C'] as const).map((mode) => (
               <button
                 key={mode}
@@ -603,8 +615,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
           <input
             value={form.product_name}
             onChange={set('product_name')}
-            placeholder="npr. TaskFlow, BudgetBuddy, QuickDocs..."
-            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            onFocus={() => clearExampleHint('product_name')}
+            placeholder={exampleFieldHints.product_name || 'npr. TaskFlow, BudgetBuddy, QuickDocs...'}
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
             required
           />
         </div>
@@ -616,8 +629,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
           <input
             value={form.elevator_pitch}
             onChange={set('elevator_pitch')}
-            placeholder={placeholders.elevator_pitch}
-            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            onFocus={() => clearExampleHint('elevator_pitch')}
+            placeholder={exampleFieldHints.elevator_pitch || placeholders.elevator_pitch}
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
             required
           />
         </div>
@@ -633,7 +647,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
                 onChange={set('b2b2c_consumer_description')}
                 rows={3}
                 placeholder={language === 'en' ? 'Describe the consumer-facing app, features, convenience, and personal value...' : 'Opiši aplikaciju, značajke, jednostavnost i vrijednost za krajnjeg korisnika...'}
-                className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
                 required
               />
             </div>
@@ -646,7 +660,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
                 onChange={set('b2b2c_business_description')}
                 rows={3}
                 placeholder={language === 'en' ? 'Describe the value proposition for partners, monetization, commissions, or ROI...' : 'Opiši vrijednost za poslovne partnere, zaradu, provizije ili ROI...'}
-                className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
                 required
               />
             </div>
@@ -659,9 +673,10 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
             <textarea
               value={form.detailed_description}
               onChange={set('detailed_description')}
+              onFocus={() => clearExampleHint('detailed_description')}
               rows={4}
-              placeholder={placeholders.detailed_description}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+              placeholder={exampleFieldHints.detailed_description || placeholders.detailed_description}
+              className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
               required
             />
             <p className="mt-1 text-xs text-zinc-500">{ui.detailedHelp}</p>
@@ -675,12 +690,14 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
           <input
             value={form.price_model}
             onChange={set('price_model')}
-            placeholder={placeholders.price_model}
-            className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            onFocus={() => clearExampleHint('price_model')}
+            placeholder={exampleFieldHints.price_model || placeholders.price_model}
+            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
             required
           />
           <p className="mt-1 text-xs text-zinc-500">{ui.priceHelp}</p>
         </div>
+      </div>
       </div>
 
       {adaptiveQuestions.length > 0 && (
@@ -693,8 +710,8 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                   {language === 'en'
-                    ? 'These came from the first sentence, so a local service, fintech, marketplace, or store gets different context.'
-                    : 'Ova pitanja dolaze iz prve rečenice, pa lokalna usluga, fintech, marketplace ili trgovina dobivaju drugačiji kontekst.'}
+                    ? 'Generated from your first sentence.'
+                    : 'Generirano iz tvoje prve recenice.'}
                 </p>
               </div>
               <span className="shrink-0 rounded-full border border-cyan-700/60 px-3 py-1 text-xs font-semibold text-cyan-200">
@@ -704,7 +721,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
           </div>
           <div className="grid gap-3 p-4 lg:grid-cols-2">
             {adaptiveQuestions.map((item, index) => (
-              <div key={`${item.id}-${item.question}`} className="rounded-xl border border-zinc-800 bg-zinc-950/45 p-3">
+              <div key={`${item.id}-${item.question}`} className="rounded-xl border border-zinc-800/80 bg-zinc-950/55 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
                 <label className="block text-sm font-semibold text-zinc-100 mb-1">
                   <span className="text-cyan-400">{index + 1}.</span> {item.question}
                 </label>
@@ -713,9 +730,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
                   onChange={(event) => setAdaptiveAnswer(item.question, item.category, event.target.value)}
                   rows={2}
                   placeholder={item.placeholder}
-                  className="w-full rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-cyan-500 transition-colors resize-none"
-                />
-              </div>
+                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors focus:border-cyan-500 focus:outline-none"
+              />
+            </div>
             ))}
           </div>
         </section>
@@ -725,13 +742,13 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
         <button
           type="button"
           onClick={() => setShowOfficeHours((v) => !v)}
-          className="w-full flex items-start justify-between gap-4 p-4 text-left cursor-pointer hover:bg-zinc-900/60 transition-colors"
+          className="flex w-full flex-col gap-3 p-4 text-left transition-colors hover:bg-zinc-900/60 sm:flex-row sm:items-start sm:justify-between"
         >
           <span>
             <span className="block text-sm font-bold text-zinc-200">{officeHours.title}</span>
             <span className="block text-xs text-zinc-500 leading-relaxed mt-1">{officeHours.subtitle}</span>
           </span>
-          <span className="shrink-0 rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-300">
+          <span className="shrink-0 self-start rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-300">
             {showOfficeHours ? officeHours.hide : officeHours.show}
             {completedDiscoveryCount > 0 ? ` · ${completedDiscoveryCount}/6` : ''}
           </span>
@@ -740,7 +757,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
         {showOfficeHours && (
           <div className="grid gap-3 border-t border-zinc-800 p-4 lg:grid-cols-2">
             {officeHours.questions.map((item, index) => (
-              <div key={item.question} className="rounded-xl border border-zinc-800 bg-zinc-950/45 p-3">
+              <div key={item.question} className="rounded-xl border border-zinc-800/80 bg-zinc-950/55 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
                 <label className="block text-sm font-semibold text-zinc-100 mb-1">
                   <span className="text-cyan-400">{index + 1}.</span> {item.question}
                 </label>
@@ -750,9 +767,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
                   onChange={(event) => setDiscoveryAnswer(item.question, item.category, event.target.value)}
                   rows={2}
                   placeholder={officeHours.placeholder}
-                  className="w-full rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
-                />
-              </div>
+                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
             ))}
           </div>
         )}
@@ -776,8 +793,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
             <input
               value={form.target_market}
               onChange={set('target_market')}
-              placeholder="npr. freelanceri u EU, mala poduzeća u DACH regiji..."
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              onFocus={() => clearExampleHint('target_market')}
+              placeholder={exampleFieldHints.target_market || 'npr. freelanceri u EU, mala poduzeća u DACH regiji...'}
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
             />
           </div>
           <AreaMapPicker
@@ -800,8 +818,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
             <input
               value={form.assumed_customer}
               onChange={set('assumed_customer')}
-              placeholder={placeholders.assumed_customer}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              onFocus={() => clearExampleHint('assumed_customer')}
+              placeholder={exampleFieldHints.assumed_customer || placeholders.assumed_customer}
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
             />
           </div>
           <div>
@@ -811,8 +830,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
             <input
               value={form.competitors}
               onChange={set('competitors')}
-              placeholder="npr. Notion, Trello, ručne Excel tablice..."
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              onFocus={() => clearExampleHint('competitors')}
+              placeholder={exampleFieldHints.competitors || 'npr. Notion, Trello, ručne Excel tablice...'}
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
             />
           </div>
           <div>
@@ -823,46 +843,123 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
               value={form.website_url}
               onChange={set('website_url')}
               placeholder={placeholders.website_url_placeholder}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-700 px-4 py-3 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
             />
           </div>
         </div>
       )}
-
-      <div className={`rounded-2xl border p-4 ${
-        isReadyForValidation
-          ? 'border-emerald-800/50 bg-emerald-950/20'
-          : 'border-amber-800/50 bg-amber-950/15'
-      }`}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className={`text-sm font-bold ${isReadyForValidation ? 'text-emerald-200' : 'text-amber-200'}`}>
-              {isReadyForValidation ? ui.readyTitle : ui.missingTitle}
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-              {isReadyForValidation ? ui.readyHelp : ui.missingHelp}
-            </p>
+      <aside className="xl:sticky xl:top-6">
+        <div className="space-y-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/55 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+          <div className="flex flex-col gap-2">
+            {inferredCategory && (
+              <span className="self-start rounded-full border border-cyan-700/60 bg-cyan-950/40 px-3 py-1 text-xs font-semibold text-cyan-100">
+                {inferredCategory}
+              </span>
+            )}
+            {aiGuidance && (
+              <div className="rounded-xl border border-cyan-900/50 bg-cyan-950/15 p-3 text-sm leading-relaxed text-cyan-50">
+                {aiGuidance}
+              </div>
+            )}
           </div>
-          {!isReadyForValidation && (
-            <span className="shrink-0 rounded-full border border-amber-700/60 px-3 py-1 text-xs font-bold text-amber-200">
-              {missingRequiredCount} {ui.missingCount}
-            </span>
-          )}
+
+          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-zinc-200">
+                  {language === 'en' ? 'Supporting document' : 'Dodatni dokument'}
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  {language === 'en' ? 'Optional extra context.' : 'Opcionalni dodatni kontekst.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDocumentUpload((value) => !value)}
+                className="inline-flex items-center gap-2 text-left text-xs font-semibold text-cyan-200 transition-colors hover:text-white"
+              >
+                <FileText className="h-4 w-4" />
+                {showDocumentUpload ? ui.uploadHide : ui.uploadShow}
+              </button>
+            </div>
+
+            {showDocumentUpload && (
+              <div className="mt-3 space-y-3">
+                <p className="text-[11px] leading-relaxed text-zinc-500">
+                  {language === 'en'
+                    ? 'Attach a pitch, notes, PDF, DOC/DOCX, TXT or MD.'
+                    : 'Dodaj pitch, biljeske, PDF, DOC/DOCX, TXT ili MD.'}
+                </p>
+                <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-cyan-800/70 bg-cyan-950/25 px-4 py-2 text-xs font-bold text-cyan-100 transition-colors hover:border-cyan-400 hover:text-white">
+                  <FileText className="h-4 w-4" />
+                  {language === 'en' ? 'Attach file' : 'Dodaj dokument'}
+                  <input
+                    type="file"
+                    accept=".txt,.md,.markdown,.pdf,.doc,.docx,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*"
+                    className="hidden"
+                    onChange={handleDocumentUpload}
+                  />
+                </label>
+                {documentName && (
+                  <div className="rounded-lg border border-cyan-900/40 bg-cyan-950/15 px-3 py-2">
+                    <p className="truncate text-xs font-semibold text-cyan-100">
+                      {language === 'en' ? 'Attached:' : 'Dodano:'} {documentName}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={clearDocumentUpload}
+                      className="mt-2 text-left text-xs font-bold text-zinc-400 hover:text-red-300"
+                    >
+                      {language === 'en' ? 'Remove' : 'Ukloni'}
+                    </button>
+                  </div>
+                )}
+                {documentError && <p className="text-xs text-red-300">{documentError}</p>}
+              </div>
+            )}
+          </div>
+
+          <div className={`rounded-2xl border p-4 ${
+            isReadyForValidation
+              ? 'border-emerald-800/50 bg-emerald-950/20'
+              : 'border-amber-800/50 bg-amber-950/15'
+          }`}>
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                  {language === 'en' ? 'Validation status' : 'Status validacije'}
+                </p>
+                <p className={`text-sm font-bold ${isReadyForValidation ? 'text-emerald-200' : 'text-amber-200'}`}>
+                  {isReadyForValidation ? ui.readyTitle : ui.missingTitle}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                  {isReadyForValidation ? ui.readyHelp : ui.missingHelp}
+                </p>
+              </div>
+              {!isReadyForValidation && (
+                <span className="self-start rounded-full border border-amber-700/60 px-3 py-1 text-xs font-bold text-amber-200">
+                  {missingRequiredCount} {ui.missingCount}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={!isReadyForValidation}
+            className="w-full rounded-xl bg-indigo-600 py-4 text-lg font-semibold text-white shadow-lg shadow-indigo-950/40 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
+          >
+            <span>{isReadyForValidation ? ui.submit : `${ui.missingTitle} (${missingRequiredCount})`}</span>
+          </button>
+
+          <p className="text-center text-xs text-zinc-500">
+            {ui.footer}
+          </p>
         </div>
+      </aside>
       </div>
-
-      <button
-        type="submit"
-        disabled={!isReadyForValidation}
-        className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white font-semibold text-lg transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-      >
-        <span>{isReadyForValidation ? ui.submit : `${ui.missingTitle} (${missingRequiredCount})`}</span>
-        {isReadyForValidation && <span className="text-xl">→</span>}
-      </button>
-
-      <p className="text-center text-xs text-zinc-500">
-        {ui.footer}
-      </p>
+      </>
+      )}
     </form>
   );
 }

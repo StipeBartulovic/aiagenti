@@ -102,7 +102,7 @@ export default function ObsidianSync({ report, form, language }: Props) {
   const busy = state === 'connecting' || state === 'syncing';
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {msg && (
         <span className={`text-[11px] ${state === 'error' ? 'text-red-400' : 'text-violet-400'} hidden lg:inline`}>
           {msg}

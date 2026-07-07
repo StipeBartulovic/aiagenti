@@ -512,8 +512,8 @@ export default function AreaMapPicker({ language, value, values, onChange }: Pro
   );
 
   const mapControls = (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800 bg-zinc-950/95 px-3 py-2">
-      <div className="text-xs text-zinc-500">
+      <div className="flex flex-col gap-2 border-t border-zinc-800 bg-zinc-950/95 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="text-xs text-zinc-500">
         {drawing ? (
           <span className="text-indigo-300">{t.drawHint}</span>
         ) : selectedAreas.length > 0 ? (
@@ -522,38 +522,38 @@ export default function AreaMapPicker({ language, value, values, onChange }: Pro
           <span>{points.length} {t.points}</span>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={startDrawing}
-          className={`px-3 py-1.5 rounded text-xs font-semibold border transition-colors cursor-pointer ${drawing ? 'border-indigo-500 bg-indigo-600 text-white' : 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700'}`}
-        >
-          {t.draw}
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsExpanded((v) => !v)}
-          className="px-3 py-1.5 rounded text-xs font-semibold border border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 transition-colors cursor-pointer"
-        >
-          {isExpanded ? t.shrink : t.expand}
-        </button>
-        <button
-          type="button"
-          onClick={finish}
-          disabled={points.length < 3}
-          className="px-3 py-1.5 rounded text-xs font-semibold border border-emerald-700 bg-emerald-700/80 disabled:border-zinc-800 disabled:bg-zinc-800 disabled:text-zinc-600 text-white transition-colors cursor-pointer disabled:cursor-not-allowed"
-        >
-          {t.finish}
-        </button>
-        <button
-          type="button"
-          onClick={clear}
-          className="px-3 py-1.5 rounded text-xs font-semibold border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
-        >
-          {t.clear}
-        </button>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <button
+            type="button"
+            onClick={startDrawing}
+            className={`rounded px-3 py-2 text-xs font-semibold border transition-colors cursor-pointer ${drawing ? 'border-indigo-500 bg-indigo-600 text-white' : 'border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700'} sm:py-1.5`}
+          >
+            {t.draw}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsExpanded((v) => !v)}
+            className="rounded px-3 py-2 text-xs font-semibold border border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 transition-colors cursor-pointer sm:py-1.5"
+          >
+            {isExpanded ? t.shrink : t.expand}
+          </button>
+          <button
+            type="button"
+            onClick={finish}
+            disabled={points.length < 3}
+            className="rounded px-3 py-2 text-xs font-semibold border border-emerald-700 bg-emerald-700/80 disabled:border-zinc-800 disabled:bg-zinc-800 disabled:text-zinc-600 text-white transition-colors cursor-pointer disabled:cursor-not-allowed sm:py-1.5"
+          >
+            {t.finish}
+          </button>
+          <button
+            type="button"
+            onClick={clear}
+            className="rounded px-3 py-2 text-xs font-semibold border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer sm:py-1.5"
+          >
+            {t.clear}
+          </button>
+        </div>
       </div>
-    </div>
   );
 
   return (
@@ -566,7 +566,7 @@ export default function AreaMapPicker({ language, value, values, onChange }: Pro
       <div
         className={
           isExpanded
-            ? `fixed inset-3 md:inset-6 z-50 flex flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl ${drawing ? 'ai-area-map-drawing' : ''}`
+            ? `fixed inset-0 z-50 flex flex-col overflow-hidden border border-zinc-700 bg-zinc-950 shadow-2xl sm:inset-3 sm:rounded-2xl md:inset-6 ${drawing ? 'ai-area-map-drawing' : ''}`
             : `rounded-lg border border-zinc-700 overflow-hidden bg-zinc-950 ${drawing ? 'ai-area-map-drawing' : ''}`
         }
       >

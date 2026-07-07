@@ -289,6 +289,41 @@ function normalizeConfidence(confidence: SynthesisResult['confidence']): Validat
   return { score, label, reasons, missing_evidence };
 }
 
+function normalizeNextExperiment(nextExperiment: SynthesisResult['next_experiment']): ValidationReport['next_experiment'] {
+  if (!nextExperiment || typeof nextExperiment !== 'object') return undefined;
+
+  const hypothesis = typeof nextExperiment.hypothesis === 'string' ? nextExperiment.hypothesis.trim().slice(0, 220) : '';
+  const who_to_test = typeof nextExperiment.who_to_test === 'string' ? nextExperiment.who_to_test.trim().slice(0, 220) : '';
+  const where_to_find = Array.isArray(nextExperiment.where_to_find)
+    ? nextExperiment.where_to_find
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .map((item) => item.trim().slice(0, 120))
+        .slice(0, 5)
+    : [];
+  const outreach_message =
+    typeof nextExperiment.outreach_message === 'string'
+      ? nextExperiment.outreach_message.trim().slice(0, 500)
+      : '';
+  const duration = typeof nextExperiment.duration === 'string' ? nextExperiment.duration.trim().slice(0, 80) : '';
+  const success_criteria = Array.isArray(nextExperiment.success_criteria)
+    ? nextExperiment.success_criteria
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .map((item) => item.trim().slice(0, 180))
+        .slice(0, 4)
+    : [];
+
+  if (!hypothesis || !who_to_test || !outreach_message) return undefined;
+
+  return {
+    hypothesis,
+    who_to_test,
+    where_to_find,
+    outreach_message,
+    duration: duration || '7 days',
+    success_criteria,
+  };
+}
+
 async function synthesize(
   form: IdeaFormData,
   reactions: PersonaReaction[],
@@ -405,10 +440,19 @@ Return ONLY this JSON (no extra text):
     "product": "specific actionable product recommendation",
     "marketing": "specific actionable marketing recommendation",
     "pricing": "specific actionable pricing recommendation"
+  },
+  "next_experiment": {
+    "hypothesis": "one concrete hypothesis to test in the next 7 days",
+    "who_to_test": "specific first segment to contact",
+    "where_to_find": ["3-5 concrete places/channels to find them"],
+    "outreach_message": "one short outreach or DM message the founder can copy-paste",
+    "duration": "default to 7 days unless a shorter test is clearly better",
+    "success_criteria": ["0-4 concrete pass/fail checkpoints"]
   }${segmentsSchema}
 }
 RULES: rejection.reasons percentages must sum to 100. radar_data reflects primary buyers. Be specific and direct.
-Confidence is NOT product score. It measures how much the founder should trust this synthetic analysis. Penalize missing real-world proof, vague founder Office Hours answers, unclear buyer, thin target market, weak pricing info, or lack of website/competitor context.${segmentStats.length ? ' Include exactly one entry in segment_verdicts for each labeled audience above, keeping the labels identical.' : ''}`;
+Confidence is NOT product score. It measures how much the founder should trust this synthetic analysis. Penalize missing real-world proof, vague founder Office Hours answers, unclear buyer, thin target market, weak pricing info, or lack of website/competitor context.
+The next_experiment must be specific enough that the founder could run it today without extra planning. Prefer outbound interviews, DM outreach, small landing page tests, or waitlist tests over vague advice.${segmentStats.length ? ' Include exactly one entry in segment_verdicts for each labeled audience above, keeping the labels identical.' : ''}`;
 
   const raw = await callDeepSeek(
     [
@@ -638,6 +682,7 @@ export async function runEngine(
     rejection: synthesis.rejection,
     top_questions: synthesis.top_questions,
     action_plan: synthesis.action_plan,
+    next_experiment: normalizeNextExperiment(synthesis.next_experiment),
     segments,
     opportunity,
     clusters: clusters.length ? clusters : undefined,

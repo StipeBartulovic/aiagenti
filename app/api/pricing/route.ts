@@ -1,11 +1,13 @@
 import { errorPayload } from '@/lib/server/errors';
+import { guardApiRoute, parseAndSanitizeJson } from '@/lib/server/api-guard';
 import { analyzePricing, type PricingRequest } from '@/lib/server/pricing';
 
 export const maxDuration = 120;
 
 export async function POST(request: Request) {
   try {
-    const body: PricingRequest = await request.json();
+    await guardApiRoute(request);
+    const body = await parseAndSanitizeJson<PricingRequest>(request);
     return Response.json(await analyzePricing(body));
   } catch (err) {
     console.error('Pricing error:', err);

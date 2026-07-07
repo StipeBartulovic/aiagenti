@@ -1,4 +1,5 @@
-import { errorPayload, ServerActionError } from '@/lib/server/errors';
+import { errorPayload } from '@/lib/server/errors';
+import { parseAndSanitizeJson } from '@/lib/server/api-guard';
 import {
   chargeDesktopTokens,
   ensureDesktopTokens,
@@ -6,18 +7,13 @@ import {
   verifyDesktopSecret,
 } from '@/lib/server/desktop-billing';
 import {
-  isServerActionCommand,
   serverActionHandlers,
   type ServerActionCommand,
 } from '@/lib/server/actions';
+import { parseDesktopAiRequest } from '@/lib/server/request-schemas';
 
 export const maxDuration = 300;
 export const runtime = 'nodejs';
-
-interface DesktopAiRequest {
-  command: string;
-  payload: unknown;
-}
 
 type DesktopActionHandler = (payload: unknown) => Promise<unknown>;
 
@@ -25,10 +21,7 @@ export async function POST(request: Request) {
   try {
     verifyDesktopSecret(request.headers);
     const accountId = readDesktopAccountId(request.headers);
-    const body: DesktopAiRequest = await request.json();
-    if (!body.command || !isServerActionCommand(body.command)) {
-      throw new ServerActionError('Unknown desktop AI command.', 400, 'unknown_desktop_ai_command');
-    }
+    const body = parseDesktopAiRequest(await parseAndSanitizeJson<Record<string, unknown>>(request));
 
     const command = body.command as ServerActionCommand;
     const reservation = await ensureDesktopTokens(accountId, command, body.payload);

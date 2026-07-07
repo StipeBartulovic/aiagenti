@@ -57,7 +57,7 @@ export default function AccountModeNotice({ language, compact = false }: Props) 
           {storage}
         </span>
       </div>
-      <p className={`mt-2 leading-relaxed text-zinc-400 ${compact ? 'text-xs' : 'text-sm'}`}>{body}</p>
+      <p className={`mt-2 max-w-full break-words leading-relaxed text-zinc-400 ${compact ? 'text-xs' : 'text-sm'}`}>{body}</p>
     </div>
   );
 }
