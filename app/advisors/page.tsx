@@ -14,7 +14,7 @@ import OnboardingChat from '@/components/OnboardingChat';
 import PanelChat from '@/components/PanelChat';
 import TokenWallet from '@/components/TokenWallet';
 import { aiClient } from '@/lib/ai-client';
-import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
+import { TOKEN_COSTS, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
 import { ChevronDown, ChevronUp, Menu, Settings2 } from 'lucide-react';
 import type {
@@ -188,7 +188,7 @@ export default function AdvisorsPage() {
     setSeeding(true);
     setFatalError('');
     try {
-      const spent = spendTokens(TOKEN_COSTS.advisor_setup);
+      const spent = spendTokens(TOKEN_COSTS.advisor_setup, 'Priprema savjetnika');
       if (!spent.ok) {
         throw new Error(t.tokenError(spent.missing));
       }
@@ -241,7 +241,7 @@ export default function AdvisorsPage() {
   // ── Render states ──
   if (authLoading || !user || booting) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="paper-root paper-advisors min-h-screen flex items-center justify-center">
         <div className="mx-4 max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-center shadow-2xl shadow-indigo-950/20">
           <span className="mx-auto mb-4 block w-9 h-9 border-4 border-zinc-800 border-t-indigo-500 rounded-full animate-spin" />
           <h1 className="text-lg font-semibold text-white">{t.bootingTitle}</h1>
@@ -252,8 +252,8 @@ export default function AdvisorsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <nav className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur-sm sm:px-6">
+    <div className="paper-root paper-advisors min-h-screen text-zinc-100">
+      <nav className="border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 sm:px-6">
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -290,6 +290,22 @@ export default function AdvisorsPage() {
           <div className={`${showMobileUtilities ? 'flex' : 'hidden'} flex-col gap-3 rounded-[1.6rem] border border-zinc-800/80 bg-zinc-900/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.14)] lg:flex lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <TokenWallet language={language} compact />
+              <button
+                type="button"
+                onClick={() => router.push('/plan')}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                title={language === 'en' ? 'Open the business plan dossier' : 'Otvori dosje biznis plana'}
+              >
+                📋 {language === 'en' ? 'Business plan' : 'Biznis plan'}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/market')}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
+                title={language === 'en' ? 'Open market research' : 'Otvori istraživanje tržišta'}
+              >
+                🌍 {language === 'en' ? 'Market' : 'Tržište'}
+              </button>
               <button
                 type="button"
                 onClick={() => router.push('/settings')}

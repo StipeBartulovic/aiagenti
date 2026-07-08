@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { AGENTS, AGENT_ORDER } from '@/lib/agents';
 import { aiClient } from '@/lib/ai-client';
 import { buildAgentContext } from '@/lib/knowledge';
+import Boardroom from './Boardroom';
 import KnowledgePanel from './KnowledgePanel';
-import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
+import { TOKEN_COSTS, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
 import type { AgentId, ChatMessage, ProjectKnowledge, ProjectTask, ResearchSource } from '@/lib/types';
 
@@ -103,6 +104,7 @@ export default function PanelChat({
       error: 'Greška u komunikaciji. Pokušaj ponovno.',
       tokenError: (cost: number, missing: number) => tokenShortfallMessage('hr', 'Odgovor savjetnika', cost, missing),
       panelTitle: 'Tvoj savjetnički panel',
+      boardroomHint: 'Panel te sluša. Podignuta ruka = netko ima što reći — klikni ga i daj mu riječ.',
       deepMode: 'Dublji odgovor',
       deepModeHint: 'Skuplje, sporije, ali detaljnije',
       deepBadge: 'Dublji odgovor',
@@ -135,6 +137,7 @@ export default function PanelChat({
       error: 'Communication error. Try again.',
       tokenError: (cost: number, missing: number) => tokenShortfallMessage('en', 'Advisor answer', cost, missing),
       panelTitle: 'Your advisory panel',
+      boardroomHint: 'The panel is listening. A raised hand means someone has something to say — click them to give the floor.',
       deepMode: 'Deep answer',
       deepModeHint: 'More tokens, slower, more detailed',
       deepBadge: 'Deep answer',
@@ -195,7 +198,7 @@ export default function PanelChat({
     try {
       if (intent !== 'open') {
         const cost = useDeepMode ? TOKEN_COSTS.advisor_deep : TOKEN_COSTS.advisor_fast;
-        const spent = spendTokens(cost);
+        const spent = spendTokens(cost, useDeepMode ? `${AGENTS[agentId].name} (dublji odgovor)` : AGENTS[agentId].name);
         if (!spent.ok) {
           setError(t.tokenError(cost, spent.missing));
           return null;
@@ -270,7 +273,7 @@ export default function PanelChat({
   };
 
   const runBackgroundExtract = async (userMessage: string, assistantMessage = '', agentId?: AgentId) => {
-    const spent = spendTokens(TOKEN_COSTS.advisor_memory);
+    const spent = spendTokens(TOKEN_COSTS.advisor_memory, 'Memorija projekta');
     if (!spent.ok) return;
     setKbUpdating(true);
     try {
@@ -291,7 +294,7 @@ export default function PanelChat({
   };
 
   const createTaskFromConversation = async (userRequest: string, baseMessages: ChatMessage[]) => {
-    const spent = spendTokens(TOKEN_COSTS.advisor_task);
+    const spent = spendTokens(TOKEN_COSTS.advisor_task, 'Novi task');
     if (!spent.ok) {
       setError(t.tokenError(TOKEN_COSTS.advisor_task, spent.missing));
       return;
@@ -395,7 +398,8 @@ export default function PanelChat({
     void showAddOnChips(next, agentId);
   };
 
-  const handleChip = (agentId: AgentId) => {
+  // Klik na savjetnika za stolom: ako se javio → daj mu riječ; inače ga pitaj za mišljenje
+  const handleSeatPick = (agentId: AgentId) => {
     if (busy) return;
     void speak(agentId, messages);
   };
@@ -458,54 +462,60 @@ export default function PanelChat({
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
       <div className={`${showMainPanel ? 'flex' : 'hidden'} min-h-[65vh] min-w-0 flex-1 flex-col rounded-[1.8rem] border border-zinc-800/80 bg-zinc-900/35 p-3 shadow-[0_24px_60px_rgba(0,0,0,0.18)] lg:flex lg:min-h-0`}>
-      {/* Header / roster */}
-      <div className="border-b border-zinc-800/80 pb-4">
-        <div className="flex flex-wrap items-start gap-3">
-        <div className="flex -space-x-2 flex-shrink-0">
-          {AGENT_ORDER.map((id) => (
-            <div
-              key={id}
-              className={`flex h-9 w-9 items-center justify-center rounded-full ${AGENTS[id].accent.bg} border-2 border-zinc-950 text-base shadow-lg shadow-black/10`}
-              title={`${AGENTS[id].name} · ${AGENTS[id].title[language]}`}
+      {/* Header: naslov + status + tabovi, pa savjetnici za stolom */}
+      <div className="border-b border-zinc-800/80 pb-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-white text-sm leading-tight">{t.panelTitle}</p>
+            <p className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {t.boardroomHint}
+            </p>
+          </div>
+          {kbUpdating && (
+            <span className="text-xs text-zinc-500 items-center gap-1.5 flex-shrink-0 hidden sm:flex">
+              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              {t.updating}
+            </span>
+          )}
+          {creatingTask && (
+            <span className="text-xs text-emerald-400 items-center gap-1.5 flex-shrink-0 hidden sm:flex">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              {t.tasksCreating}
+            </span>
+          )}
+          <div className="hidden flex-shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/80 p-0.5 lg:flex">
+            <button
+              onClick={activateChat}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors ${tab === 'chat' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
             >
-              {AGENTS[id].emoji}
-            </div>
-          ))}
+              {t.tabChat}
+            </button>
+            <button
+              onClick={activatePlan}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors ${tab === 'plan' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
+            >
+              {t.tabPlan}
+            </button>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-white text-sm leading-tight">{t.panelTitle}</p>
-          <p className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            {AGENT_ORDER.map((id) => AGENTS[id].name).join(', ')} · {t.listening}
-          </p>
+
+        {/* Savjetnici s druge strane stola: ✋ = ima što reći, hover = ekspertiza, klik = riječ */}
+        <div className="mt-8">
+          <Boardroom
+            language={language}
+            suggestions={suggestions}
+            thinkingAgent={thinkingAgent}
+            busy={busy}
+            triaging={triaging}
+            onPick={handleSeatPick}
+            onDismiss={dismissChip}
+          />
         </div>
-        {kbUpdating && (
-          <span className="text-xs text-zinc-500 items-center gap-1.5 flex-shrink-0 hidden sm:flex">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            {t.updating}
-          </span>
-        )}
-        {creatingTask && (
-          <span className="text-xs text-emerald-400 items-center gap-1.5 flex-shrink-0 hidden sm:flex">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            {t.tasksCreating}
-          </span>
-        )}
-        <div className="hidden flex-shrink-0 rounded-xl border border-zinc-800 bg-zinc-900/80 p-0.5 lg:flex">
-          <button
-            onClick={activateChat}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors ${tab === 'chat' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-          >
-            {t.tabChat}
-          </button>
-          <button
-            onClick={activatePlan}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium cursor-pointer transition-colors ${tab === 'plan' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'}`}
-          >
-            {t.tabPlan}
-          </button>
-        </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+
+        {/* Kreni od ovoga — kompaktni prečaci (hint u title) */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium text-zinc-500">{t.primaryModesTitle}:</span>
           {PRIMARY_ADVISOR_MODES.map((mode) => {
             const agent = AGENTS[mode.agentId];
             const title = mode.key === 'research' ? t.primaryResearch : t.primaryPositioning;
@@ -516,44 +526,17 @@ export default function PanelChat({
                 type="button"
                 onClick={() => handleForce(mode.agentId)}
                 disabled={busy}
-                className="rounded-[1.4rem] border border-zinc-800 bg-zinc-950/55 p-4 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-950 disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_12px_30px_rgba(0,0,0,0.10)]"
+                title={hint}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border ${agent.accent.border} bg-zinc-950/60 px-2.5 py-1 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60`}
               >
-                <div className="flex items-start gap-3">
-                  <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${agent.accent.bg} text-base shadow-lg shadow-black/10`}>
-                    {agent.emoji}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white">{title}</p>
-                    <p className={`mt-0.5 text-xs font-medium ${agent.accent.text}`}>{agent.name} · {agent.title[language]}</p>
-                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">{hint}</p>
-                  </div>
-                </div>
+                <span className="text-xs">{agent.emoji}</span>
+                {title}
               </button>
             );
           })}
         </div>
-        <div className="mt-3 flex items-center gap-2 text-xs text-zinc-500">
-          <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-          <span className="font-medium text-zinc-400">{t.primaryModesTitle}</span>
-          <span>{t.primaryModesHelp}</span>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
-          <span>{t.rosterHint}</span>
-          <div className="flex -space-x-2">
-            {AGENT_ORDER.map((id) => (
-              <div
-                key={`secondary-${id}`}
-                className={`h-7 w-7 rounded-full ${AGENTS[id].accent.bg} border-2 border-zinc-950 flex items-center justify-center text-xs`}
-                title={`${AGENTS[id].name} · ${AGENTS[id].title[language]}`}
-              >
-                {AGENTS[id].emoji}
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
-      </div>
-      <div className="sticky top-0 z-10 mt-3 grid grid-cols-3 gap-2 bg-zinc-900/95 pb-1 pt-1 backdrop-blur lg:hidden">
+      <div className="mt-3 grid grid-cols-3 gap-2 bg-zinc-900/95 pb-1 pt-1 lg:hidden">
         <button
           type="button"
           onClick={activateChat}
@@ -702,47 +685,6 @@ export default function PanelChat({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Suggestion chips — tko se želi javiti */}
-          <div className="space-y-2">
-            {triaging && !suggestions.length && (
-              <p className="text-xs text-zinc-600 flex items-center gap-1.5 px-1">
-                <span className="w-1 h-1 rounded-full bg-zinc-600 animate-pulse" /> {t.checking}
-              </p>
-            )}
-            {suggestions.map((s) => {
-              const a = AGENTS[s.agentId];
-              return (
-                <div
-                  key={s.agentId}
-                  className={`flex items-center gap-2 rounded-2xl border ${a.accent.border} bg-zinc-900/90 py-1.5 pl-2 pr-1 shadow-[0_10px_24px_rgba(0,0,0,0.10)]`}
-                >
-                  <button
-                    onClick={() => handleChip(s.agentId)}
-                    disabled={busy}
-                    className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer disabled:cursor-default"
-                  >
-                    <div className={`w-7 h-7 rounded-full ${a.accent.bg} flex items-center justify-center text-sm flex-shrink-0`}>
-                      {a.emoji}
-                    </div>
-                    <span className="text-sm text-zinc-200 truncate">
-                      <span className={`font-medium ${a.accent.text}`}>{a.name}</span>{' '}
-                      <span className="text-zinc-400">{t.wantsToSpeak}</span>
-                      {s.teaser ? <span className="text-zinc-500"> — {s.teaser}</span> : null}
-                    </span>
-                    <span className={`ml-auto text-xs ${a.accent.text} flex-shrink-0 pr-1`}>▸</span>
-                  </button>
-                  <button
-                    onClick={() => dismissChip(s.agentId)}
-                    className="text-zinc-600 hover:text-zinc-400 text-sm px-1.5 cursor-pointer flex-shrink-0"
-                    title="×"
-                  >
-                    ✕
-                  </button>
-                </div>
-              );
-            })}
           </div>
 
           {/* Input + slash */}

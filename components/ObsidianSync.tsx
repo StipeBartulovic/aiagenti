@@ -8,17 +8,18 @@ import {
   writeNotes,
 } from '@/lib/obsidian-fs';
 import { aiClient } from '@/lib/ai-client';
-import type { IdeaFormData, ValidationReport } from '@/lib/types';
+import type { IdeaFormData, MarketIntelligence, ValidationReport } from '@/lib/types';
 
 interface Props {
   report: ValidationReport;
   form: IdeaFormData | null;
   language: 'hr' | 'en';
+  market?: MarketIntelligence | null;
 }
 
 type State = 'idle' | 'connecting' | 'syncing' | 'done' | 'error';
 
-export default function ObsidianSync({ report, form, language }: Props) {
+export default function ObsidianSync({ report, form, language, market }: Props) {
   const [supported, setSupported] = useState(true);
   const [vault, setVault] = useState<string | null>(null);
   const [state, setState] = useState<State>('idle');
@@ -78,6 +79,7 @@ export default function ObsidianSync({ report, form, language }: Props) {
         {
           idea: form ?? ({ product_name: report.meta.product_name } as IdeaFormData),
           report,
+          market: market ?? null,
           language,
         },
         t.err

@@ -16,7 +16,6 @@ import {
   Loader2,
   Megaphone,
   MessageSquareText,
-  RefreshCw,
   Search,
   Sparkles,
   Store,
@@ -26,18 +25,19 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { ValidationReport, IdeaFormData, PricingAnalysis, ResearchAngle, ResearchReport } from '@/lib/types';
+import { buildDiscoveryQuestions, type DiscoveryQuestion } from '@/lib/discovery';
 import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
-import { TOKEN_COSTS, formatTokens, spendTokens } from '@/lib/tokens';
+import { TOKEN_COSTS, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
 
-const BUY_COLOR = '#22c55e';
-const MAYBE_COLOR = '#eab308';
-const REJECT_COLOR = '#ef4444';
-const ACCENT = '#6366f1';
+const BUY_COLOR = '#1e6b44';
+const MAYBE_COLOR = '#8a6d1f';
+const REJECT_COLOR = '#c23217';
+const ACCENT = '#8a6d1f';
 
 function spendOrExplain(cost: number, language: 'hr' | 'en', label: string): string | null {
-  const spent = spendTokens(cost);
+  const spent = spendTokens(cost, label);
   if (spent.ok) return null;
   return tokenShortfallMessage(language, label, cost, spent.missing);
 }
@@ -56,7 +56,7 @@ function ScoreRing({ score, labelTranslation }: ScoreRingProps) {
   return (
     <div className="flex flex-col items-center gap-2">
       <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r={r} fill="none" stroke="#27272a" strokeWidth="12" />
+        <circle cx="70" cy="70" r={r} fill="none" stroke="#d9d2c0" strokeWidth="12" />
         <circle
           cx="70" cy="70" r={r}
           fill="none"
@@ -67,8 +67,8 @@ function ScoreRing({ score, labelTranslation }: ScoreRingProps) {
           strokeDashoffset={circ / 4}
           transform="rotate(-90 70 70) scale(1,-1) translate(0,-140)"
         />
-        <text x="70" y="65" textAnchor="middle" fill="white" fontSize="28" fontWeight="700">{score}</text>
-        <text x="70" y="85" textAnchor="middle" fill="#a1a1aa" fontSize="11">/100</text>
+        <text x="70" y="65" textAnchor="middle" fill="#1b1712" fontSize="28" fontWeight="700">{score}</text>
+        <text x="70" y="85" textAnchor="middle" fill="#8b8270" fontSize="11">/100</text>
       </svg>
       <span className="text-sm font-medium" style={{ color }}>{labelTranslation}</span>
     </div>
@@ -96,7 +96,7 @@ function IntentDonut({ intent, title, labels }: IntentDonutProps) {
             {data.map((d, i) => <Cell key={i} fill={d.color} />)}
           </Pie>
           <Tooltip
-            contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8 }}
+            contentStyle={{ background: '#fffdf8', border: '1px solid #b9b09a', borderRadius: 3, color: '#1b1712' }}
             formatter={(val) => [`${val}%`, '']}
           />
         </PieChart>
@@ -235,137 +235,6 @@ function MarketSideComparison({ results, labels }: MarketSideComparisonProps) {
       ))}
     </div>
   );
-}
-
-interface DiscoveryQuestion {
-  side: 'payer' | 'user' | 'general';
-  question: string;
-  context?: string;
-  source: 'question' | 'objection' | 'doubt';
-}
-
-function buildDiscoveryQuestions(report: ValidationReport, language: 'hr' | 'en'): DiscoveryQuestion[] {
-  const out: DiscoveryQuestion[] = [];
-  const seen = new Set<string>();
-  const objectionToQuestion = (objection: string) =>
-    objection.endsWith('?')
-      ? objection
-      : language === 'en'
-      ? `What would remove this objection: ${objection}?`
-      : `Sto bi uklonilo ovaj prigovor: ${objection}?`;
-  const quoteToQuestion = (quote: string) =>
-    language === 'en'
-      ? `What would convince you if you currently think: "${quote}"?`
-      : `Sto bi te uvjerilo ako trenutno mislis: "${quote}"?`;
-  const add = (item: DiscoveryQuestion) => {
-    const key = item.question.trim().toLowerCase();
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    out.push(item);
-  };
-
-  if (report.personas?.length && report.reactions?.length) {
-    const personaById = new Map(report.personas.map((persona) => [persona.id, persona]));
-    report.reactions.forEach((reaction) => {
-      const persona = personaById.get(reaction.persona_id);
-      const side: DiscoveryQuestion['side'] =
-        persona?.market_side === 'payer' || persona?.market_side === 'partner' || persona?.market_side === 'both'
-          ? 'payer'
-          : persona?.market_side === 'user'
-          ? 'user'
-          : 'general';
-
-      reaction.questions?.forEach((question) => add({
-        side,
-        question,
-        context: reaction.main_reason || reaction.quote,
-        source: 'question',
-      }));
-      reaction.doubts?.forEach((doubt) => add({
-        side,
-        question: doubt.endsWith('?') ? doubt : `${doubt}?`,
-        context: reaction.problem_to_solve || reaction.current_alternative || reaction.main_reason,
-        source: 'doubt',
-      }));
-      reaction.objections?.forEach((objection) => add({
-        side,
-        question: objectionToQuestion(objection),
-        context: reaction.quote || reaction.main_reason,
-        source: 'objection',
-      }));
-    });
-  }
-
-  report.top_questions.forEach((question) => add({ side: 'general', question, source: 'question' }));
-  report.rejection.quotes.forEach((quote) => add({
-    side: 'general',
-    question: quoteToQuestion(quote),
-    context: quote,
-    source: 'objection',
-  }));
-
-  const hasPayerSide = report.personas?.some((persona) =>
-    persona.market_side === 'payer' || persona.market_side === 'partner' || persona.market_side === 'both'
-  );
-  const hasUserSide = report.personas?.some((persona) => persona.market_side === 'user');
-  const fallback =
-    language === 'en'
-      ? {
-          payer: [
-            'What concrete ROI or business result would make this worth adopting?',
-            'Who inside the company would approve this, and what would they need to see first?',
-            'What existing tool, agency, or workflow would this replace?',
-            'What risk would block the business from trying this in the next 30 days?',
-            'What proof would make a paid pilot feel safe enough?',
-            'How should pricing work so the business can justify it internally?',
-          ],
-          user: [
-            'Why would an end user choose this instead of their current habit?',
-            'What would need to be clear in the first 30 seconds for them to trust it?',
-            'Which moment in their day would trigger them to use this?',
-            'What would make them recommend it to another person?',
-            'What data, privacy, or reliability concern would stop them?',
-            'What must the experience do better than existing alternatives?',
-          ],
-          general: [
-            'Which promise is still too vague and needs sharper proof?',
-            'What is the smallest test that would validate real demand?',
-            'What must be explained on the landing page before anyone converts?',
-            'Which objection should be answered first in sales or marketing?',
-          ],
-        }
-      : {
-          payer: [
-            'Koji konkretan ROI ili poslovni rezultat bi ovo ucinio vrijednim usvajanja?',
-            'Tko u firmi odobrava ovakvu odluku i sto mora vidjeti prije toga?',
-            'Koji postojeci alat, agenciju ili workflow ovo zapravo zamjenjuje?',
-            'Koji rizik bi zaustavio biznis da ovo isproba u iducih 30 dana?',
-            'Koji dokaz bi placeni pilot ucinio dovoljno sigurnim?',
-            'Kako bi cijena trebala biti postavljena da je biznis moze interno opravdati?',
-          ],
-          user: [
-            'Zasto bi krajnji korisnik izabrao ovo umjesto svoje trenutne navike?',
-            'Sto mora biti jasno u prvih 30 sekundi da korisnik stekne povjerenje?',
-            'U kojem trenutku dana ili putovanja bi korisnik stvarno koristio ovo?',
-            'Sto bi korisnika natjeralo da ovo preporuci drugoj osobi?',
-            'Koja briga oko podataka, privatnosti ili pouzdanosti bi ga zaustavila?',
-            'Sto iskustvo mora raditi bolje od postojecih alternativa?',
-          ],
-          general: [
-            'Koje obecanje je jos uvijek previse nejasno i treba konkretniji dokaz?',
-            'Koji je najmanji test koji bi potvrdio stvarnu potraznju?',
-            'Sto landing page mora objasniti prije nego netko konvertira?',
-            'Koji prigovor treba prvi odgovoriti u prodaji ili marketingu?',
-          ],
-        };
-
-  if (hasPayerSide || hasUserSide) {
-    fallback.payer.forEach((question) => add({ side: 'payer', question, source: 'question' }));
-    fallback.user.forEach((question) => add({ side: 'user', question, source: 'question' }));
-  }
-  fallback.general.forEach((question) => add({ side: 'general', question, source: 'question' }));
-
-  return out.slice(0, 18);
 }
 
 interface DiscoveryQuestionBoardProps {
@@ -626,12 +495,12 @@ interface RejectionBarProps {
 function RejectionBar({ reasons, tooltipLabel }: RejectionBarProps) {
   return (
     <ResponsiveContainer width="100%" height={reasons.length * 52 + 20}>
-      <BarChart data={reasons} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-        <XAxis type="number" domain={[0, 100]} tick={{ fill: '#a1a1aa', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-        <YAxis type="category" dataKey="reason" width={160} tick={{ fill: '#d4d4d8', fontSize: 11 }} />
+      <BarChart data={reasons} layout="vertical" margin={{ left: 8, right: 20, top: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#b9b09a" horizontal={false} />
+        <XAxis type="number" domain={[0, 100]} tick={{ fill: '#57503f', fontSize: 11, fontWeight: 600 }} tickFormatter={(v) => `${v}%`} />
+        <YAxis type="category" dataKey="reason" width={170} tick={{ fill: '#1b1712', fontSize: 12, fontWeight: 700 }} />
         <Tooltip
-          contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: 8 }}
+          contentStyle={{ background: '#fffdf8', border: '1px solid #b9b09a', borderRadius: 3, color: '#1b1712' }}
           formatter={(val) => [`${val}%`, tooltipLabel]}
         />
         <Bar dataKey="percentage" fill={REJECT_COLOR} radius={[0, 4, 4, 0]} />
@@ -1502,13 +1371,6 @@ function inferCommandTool(
   return getCommandRecommendations(report, form, language)[0]?.tool ?? 'strategy';
 }
 
-function businessSignals(form?: IdeaFormData | null) {
-  const category = `${form?.inferred_category || ''} ${form?.elevator_pitch || ''}`.toLowerCase();
-  const startupish = form?.business_model === 'B2B' || /startup|saas|fintech|it|platform|app|software|softver/.test(category);
-  const localish = /lokal|uslug|trgovin|restoran|salon|monta|prozora|obrt|dostav|servis/.test(category);
-  return { startupish, localish };
-}
-
 function getCommandRecommendations(
   report: ValidationReport,
   form: IdeaFormData | null | undefined,
@@ -1677,31 +1539,30 @@ function CommandCenter({ report, form, language, showToolShelf, setShowToolShelf
   };
 
   return (
-    <section className="relative overflow-hidden rounded-[1.75rem] border border-cyan-900/50 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_34%),linear-gradient(135deg,#0b1120_0%,#09090b_48%,#061214_100%)] p-5 md:p-7 shadow-[0_24px_90px_rgba(8,145,178,0.16)]">
-      <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
+    <section className="relative overflow-hidden border border-[var(--hairline-strong)] bg-[var(--paper-raised)] p-5 shadow-[0_1px_0_var(--hairline)] md:p-7">
       <div className="relative space-y-6">
         <div className="grid gap-5 lg:grid-cols-[1fr_220px] lg:items-start">
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-500/25 bg-cyan-950/25 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-cyan-300">
+            <div className="font-data mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--hairline-strong)] bg-[var(--paper)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--annotate)]">
               <Sparkles className="h-3.5 w-3.5" />
               {labels.title}
             </div>
-            <h2 className="max-w-3xl text-2xl font-black tracking-tight text-white md:text-4xl">
+            <h2 className="max-w-3xl text-2xl font-semibold tracking-normal text-[var(--ink)] md:text-4xl">
               {labels.primaryHint}
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">{labels.subtitle}</p>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-soft)]">{labels.subtitle}</p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-[10px] uppercase tracking-widest text-zinc-500">{labels.quickStart}</p>
-            <p className="mt-2 text-3xl font-black text-white sm:text-4xl">
-              {report.score}<span className="text-base text-zinc-500">/100</span>
+          <div className="border border-[var(--hairline-strong)] bg-[var(--paper)] p-4">
+            <p className="font-data text-[10px] uppercase tracking-widest text-[var(--ink-faint)]">{labels.quickStart}</p>
+            <p className="mt-2 text-3xl font-black text-[var(--ink)] sm:text-4xl">
+              {report.score}<span className="text-base text-[var(--ink-faint)]">/100</span>
             </p>
-            <p className="mt-1 text-xs text-zinc-500">{labels.recommended}</p>
+            <p className="mt-1 text-xs text-[var(--ink-faint)]">{labels.recommended}</p>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-cyan-500/20 bg-black/35 p-2 shadow-inner shadow-black/40">
+        <div className="border-2 border-[var(--ink)] bg-[var(--paper)] p-2">
           <div className="flex flex-col gap-2 md:flex-row">
             <input
               value={command}
@@ -1710,13 +1571,13 @@ function CommandCenter({ report, form, language, showToolShelf, setShowToolShelf
                 if (event.key === 'Enter') submitCommand();
               }}
               placeholder={labels.inputPlaceholder}
-              className="min-w-0 flex-1 rounded-xl border border-transparent bg-zinc-950/80 px-4 py-4 text-base text-zinc-100 placeholder-zinc-600 outline-none transition-colors focus:border-cyan-500/70"
+              className="min-w-0 flex-1 rounded-none border border-[var(--hairline-strong)] bg-[var(--paper-raised)] px-4 py-4 text-base text-[var(--ink)] placeholder-[var(--ink-faint)] outline-none transition-colors focus:border-[var(--ink)]"
             />
             <button
               type="button"
               onClick={submitCommand}
               disabled={!form || !command.trim() || Boolean(loadingTool)}
-              className="rounded-xl bg-cyan-300 px-6 py-4 text-sm font-black text-zinc-950 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600 md:min-w-36 flex items-center justify-center gap-2"
+              className="flex items-center justify-center gap-2 rounded-none bg-[var(--ink)] px-6 py-4 text-sm font-black text-[var(--paper)] transition-colors hover:bg-[var(--verdict-red)] disabled:cursor-not-allowed disabled:bg-[var(--paper-dim)] disabled:text-[var(--ink-faint)] md:min-w-36"
             >
               {loadingTool ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
               {loadingTool ? labels.running : labels.run}
@@ -1724,29 +1585,29 @@ function CommandCenter({ report, form, language, showToolShelf, setShowToolShelf
           </div>
         </div>
 
-        {!form && <p className="text-xs text-zinc-600">{labels.needData}</p>}
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {!form && <p className="text-xs text-[var(--ink-faint)]">{labels.needData}</p>}
+        {error && <p className="text-xs text-[var(--verdict-red)]">{error}</p>}
         {result && (
-          <div className="rounded-2xl border border-cyan-500/25 bg-cyan-950/20 p-4">
-            <p className="text-[10px] uppercase tracking-widest text-cyan-300">{labels.recentResult}</p>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-100">{result}</p>
+          <div className="border border-[var(--hairline-strong)] bg-[var(--paper)] p-4">
+            <p className="font-data text-[10px] uppercase tracking-widest text-[var(--annotate)]">{labels.recentResult}</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--ink)]">{result}</p>
           </div>
         )}
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500">
+              <p className="font-data text-xs font-bold uppercase tracking-[0.18em] text-[var(--ink-soft)]">
                 {showToolShelf ? `${labels.allTools} (${allCommandTools.length})` : `${labels.recommended} (${recommendations.length})`}
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+              <p className="mt-1 text-xs leading-relaxed text-[var(--ink-faint)]">
                 {showToolShelf ? labels.allToolsHelp : labels.recommendedHelp}
               </p>
             </div>
             <button
               type="button"
               onClick={() => setShowToolShelf(!showToolShelf)}
-              className="rounded-full border border-zinc-700/80 bg-zinc-950/60 px-3 py-1.5 text-xs font-bold text-zinc-300 transition-colors hover:border-cyan-700 hover:text-cyan-200"
+              className="rounded-full border border-[var(--hairline-strong)] bg-transparent px-3 py-1.5 text-xs font-bold text-[var(--ink-soft)] transition-colors hover:border-[var(--ink)] hover:text-[var(--ink)]"
             >
               {showToolShelf ? labels.hideAllTools : `${labels.showAllTools} (${allCommandTools.length})`}
             </button>
@@ -1765,24 +1626,24 @@ function CommandCenter({ report, form, language, showToolShelf, setShowToolShelf
                   type="button"
                   onClick={() => runTool(tool)}
                   disabled={!form || Boolean(loadingTool)}
-                  className={`group min-h-[118px] rounded-2xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`group min-h-[118px] rounded-none border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                     showToolShelf
-                      ? 'border-zinc-800 bg-zinc-950/45 hover:border-cyan-800/80'
+                      ? 'border-[var(--hairline-strong)] bg-[var(--paper)] hover:border-[var(--ink)]'
                       : index === 0
-                        ? 'border-cyan-500/40 bg-cyan-950/20 hover:border-cyan-300/70'
-                        : 'border-zinc-800 bg-zinc-950/45 hover:border-cyan-800/80'
+                        ? 'border-[var(--ink)] bg-[var(--paper)] hover:border-[var(--verdict-red)]'
+                        : 'border-[var(--hairline-strong)] bg-[var(--paper)] hover:border-[var(--ink)]'
                   }`}
                 >
                   <span className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 text-sm font-black text-white">
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : <Icon className="h-4 w-4 text-cyan-300" />}
+                    <span className="flex items-center gap-2 text-sm font-black text-[var(--ink)]">
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-[var(--annotate)]" /> : <Icon className="h-4 w-4 text-[var(--annotate)]" />}
                       {labels.toolTitles[tool]}
                     </span>
                     {!showToolShelf && index === 0 && (
-                      <span className="rounded-full bg-cyan-300 px-2 py-0.5 text-[10px] font-black text-zinc-950">1</span>
+                      <span className="rounded-full bg-[var(--ink)] px-2 py-0.5 text-[10px] font-black text-[var(--paper)]">1</span>
                     )}
                   </span>
-                  <span className="mt-3 block text-xs leading-relaxed text-zinc-400 group-hover:text-zinc-300">{detail}</span>
+                  <span className="mt-3 block text-xs leading-relaxed text-[var(--ink-soft)] group-hover:text-[var(--ink)]">{detail}</span>
                 </button>
               );
             })}
@@ -2798,19 +2659,16 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
     `space-y-6 ${activeSection === id ? 'block' : 'hidden'}`;
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 pb-24">
+    <div className="paper-dashboard w-full max-w-7xl mx-auto space-y-6 pb-24">
       {showRegenerateConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl shadow-black/50">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-indigo-800/60 bg-indigo-950/40 text-indigo-200">
-              <RefreshCw className="h-5 w-5" />
-            </div>
-            <h2 className="text-xl font-bold text-white">{t.regenerateConfirmTitle}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t.regenerateConfirmHelp}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--ink)]/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md border-2 border-[var(--ink)] bg-[var(--paper-raised)] p-6">
+            <span className="stamp !text-[10px]">{t.regenerateConfirmTitle}</span>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">{t.regenerateConfirmHelp}</p>
             {regenerateError && (
-              <div className="mt-4 rounded-2xl border border-red-900/60 bg-red-950/25 p-3">
-                <p className="text-sm font-semibold text-red-100">{t.regenerateErrorTitle}</p>
-                <p className="mt-1 text-xs leading-relaxed text-red-200/80">{regenerateError}</p>
+              <div className="mt-4 border-l-4 border-[var(--verdict-red)] bg-[var(--paper-dim)] p-3">
+                <p className="text-sm font-semibold text-[var(--ink)]">{t.regenerateErrorTitle}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--ink-faint)]">{regenerateError}</p>
               </div>
             )}
             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -2821,7 +2679,7 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
                   setRegenerateError('');
                 }}
                 disabled={isRegenerating}
-                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-line text-sm disabled:opacity-50"
               >
                 {t.regenerateConfirmCancel}
               </button>
@@ -2829,7 +2687,7 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
                 type="button"
                 onClick={handleRegeneratePersonas}
                 disabled={isRegenerating}
-                className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-ink text-sm"
               >
                 {isRegenerating ? t.regeneratingPersonas : t.regenerateConfirmRun}
               </button>
@@ -2839,22 +2697,22 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
       )}
 
       {/* Meta disclaimer */}
-      <div className="flex items-start gap-2 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-4 py-3 text-xs text-zinc-400 shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-        <span className="text-yellow-400">⚠</span>
+      <div className="flex items-start gap-2 border border-[var(--hairline-strong)] bg-[var(--paper-raised)] px-4 py-3 text-xs text-[var(--ink-soft)]">
+        <span style={{ color: 'var(--annotate)' }}>⚠</span>
         <span className="leading-relaxed">
           {t.disclaimer} · {report.meta.personas_count} {t.simulatedBuyers} · {new Date(report.meta.generated_at).toLocaleString(language === 'en' ? 'en-US' : 'hr-HR')}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-800/30 bg-cyan-950/10 px-4 py-3 text-sm shadow-[0_12px_30px_rgba(0,0,0,0.12)]">
-        <span className="rounded-full border border-cyan-700/40 bg-cyan-900/30 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-cyan-200">
+      <div className="flex flex-wrap items-center gap-3 border-l-4 border-[var(--annotate)] bg-[var(--paper-raised)] px-4 py-3 text-sm">
+        <span className="font-data rounded-full border border-[var(--hairline-strong)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--ink-soft)]">
           {t.validationLevelLabel}
         </span>
-        <span className="font-semibold text-white">{t.validationLevelValue}</span>
-        <span className="text-zinc-400">{t.validationLevelHelp}</span>
+        <span className="font-semibold text-[var(--ink)]">{t.validationLevelValue}</span>
+        <span className="text-[var(--ink-faint)]">{t.validationLevelHelp}</span>
       </div>
 
-      <nav className="sticky top-[73px] z-20 -mx-1 overflow-x-auto px-1 pb-1 lg:hidden">
+      <nav className="-mx-1 overflow-x-auto px-1 pb-1 lg:hidden">
         <div className="flex min-w-max gap-2">
           {sectionTabs.map((tab) => (
             <button
@@ -2876,7 +2734,7 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
         </div>
       </nav>
 
-      <nav className="hidden lg:block sticky top-[73px] z-20 rounded-[1.6rem] border border-zinc-800 bg-zinc-950/88 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
+      <nav className="hidden lg:block rounded-[1.6rem] border border-zinc-800 bg-zinc-950/88 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl">
         <div className="grid grid-cols-6 gap-2">
           {sectionTabs.map((tab) => (
             <button
@@ -3089,6 +2947,23 @@ export default function Dashboard({ report, form, onUpdateReport }: DashboardPro
           empty: t.discoveryEmpty,
         }}
       />
+
+      {/* CTA: odgovori na pitanja u ispitivanju → dosje → jači sljedeći test */}
+      <section className="rounded-2xl border border-indigo-800/40 bg-indigo-950/15 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-xl text-sm leading-relaxed text-zinc-300">
+            {language === 'en'
+              ? 'These questions are why buyers hesitated. Answer them one by one — every answer goes into the project dossier and the next test starts smarter.'
+              : 'Ova pitanja su razlog zašto su kupci oklijevali. Odgovori na njih jedno po jedno — svaki odgovor ide u dosje projekta i sljedeći test kreće pametniji.'}
+          </p>
+          <a
+            href="/discovery"
+            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+          >
+            {language === 'en' ? 'Answer the questions →' : 'Odgovori na pitanja →'}
+          </a>
+        </div>
+      </section>
 
       </div>
 

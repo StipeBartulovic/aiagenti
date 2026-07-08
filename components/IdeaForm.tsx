@@ -36,6 +36,47 @@ interface IdeaBriefResult {
   questions: AdaptiveQuestion[];
 }
 
+const REGION_HINTS: Array<{ pattern: RegExp; label: string }> = [
+  { pattern: /\b(dalmacij[aeiu]|dalmatia|split|splita|zadar|zadra|sibenik|šibenik|dubrovnik|dubrovnika|makarska|makarske|trogir|trogira)\b/i, label: 'Dalmacija, Hrvatska' },
+  { pattern: /\b(istra|istre|istria|pula|pule|rovinj|porec|poreč|umag)\b/i, label: 'Istra, Hrvatska' },
+  { pattern: /\b(kvarner|rijeka|rijeci|rijeke|opatija|krk|cres|losinj|lošinj)\b/i, label: 'Kvarner, Hrvatska' },
+  { pattern: /\b(slavonij[aeiu]|osijek|osijeka|vukovar|vinkovci|brod|požega|pozega)\b/i, label: 'Slavonija, Hrvatska' },
+  { pattern: /\b(zagreb|zagreba|zagrebu|zagreback|zagrebačk)\b/i, label: 'Zagreb i okolica, Hrvatska' },
+  { pattern: /\b(hrvatsk[aeiuoj]?|croatia|hr)\b/i, label: 'Hrvatska' },
+];
+
+function inferRegionHint(text: string): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  return REGION_HINTS.find((hint) => hint.pattern.test(normalized))?.label ?? '';
+}
+
+function normalizeFormGeoContext(form: IdeaFormData): IdeaFormData {
+  const answerText = [
+    form.initial_brief,
+    form.elevator_pitch,
+    form.detailed_description,
+    form.b2b2c_consumer_description,
+    form.b2b2c_business_description,
+    form.target_market,
+    form.assumed_customer,
+    ...(form.discovery_answers ?? []).map((item) => item.answer),
+    ...(form.adaptive_answers ?? []).map((item) => item.answer),
+  ].filter(Boolean).join('\n');
+  const inferredRegion = inferRegionHint(answerText);
+  if (!inferredRegion) return form;
+
+  const existingTarget = (form.target_market || '').trim();
+  const targetAlreadyMatches = existingTarget.toLowerCase().includes(inferredRegion.split(',')[0].toLowerCase());
+  const targetLooksGeneric = !existingTarget || /\b(global|globalno|eu|europe|europa|croatia|hrvatska|local|lokaln)\b/i.test(existingTarget);
+  if (targetAlreadyMatches) return form;
+
+  return {
+    ...form,
+    target_market: targetLooksGeneric ? inferredRegion : `${existingTarget}; ${inferredRegion}`,
+  };
+}
+
 export default function IdeaForm({ onIdeaReady, onError }: Props) {
   const { language } = useAuth();
   const [formUnlocked, setFormUnlocked] = useState(false);
@@ -295,8 +336,7 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
       .map((item) => ({ ...item, answer: item.answer.trim() }))
       .filter((item) => item.answer.length > 0);
 
-    // Naslovnica preuzima: prijedlog ciljanih publika → odabir → simulacija
-    onIdeaReady({
+    const preparedForm = normalizeFormGeoContext({
       ...form,
       initial_brief: form.initial_brief || initialBrief.trim(),
       inferred_category: form.inferred_category || inferredCategory,
@@ -304,6 +344,9 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
       adaptive_answers,
       language,
     });
+
+    // Naslovnica preuzima: prijedlog ciljanih publika → odabir → simulacija
+    onIdeaReady(preparedForm);
   };
 
   const placeholders = {
@@ -340,8 +383,8 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
     hr: {
       title: 'Founder Office Hours',
       subtitle: 'Opcionalno. Par pitanja koja izostre ideju prije testa.',
-      show: 'Naoštri ideju prije validacije',
-      hide: 'Sakrij Office Hours',
+      show: 'Otvori',
+      hide: 'Zatvori',
       placeholder: 'Konkretan odgovor, bez marketinga...',
       questions: [
         {
@@ -379,8 +422,8 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
     en: {
       title: 'Founder Office Hours',
       subtitle: 'Optional. A few questions that sharpen the idea before the test.',
-      show: 'Sharpen the idea before validation',
-      hide: 'Hide Office Hours',
+      show: 'Open',
+      hide: 'Close',
       placeholder: 'Concrete answer, no marketing...',
       questions: [
         {
@@ -432,22 +475,36 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
       detailedHelp: '3-5 recenica je dovoljno.',
       price: 'Cijena i model naplate',
       priceHelp: 'Ako ne znas tocno, upisi pretpostavku ili raspon.',
-      advancedShow: 'Dodaj jos detalja (opcionalno)',
-      advancedHide: 'Sakrij napredna polja',
+      advancedShow: 'Dodatni detalji — tržište, konkurencija, dokument (opcionalno)',
+      advancedHide: 'Sakrij dodatne detalje',
       example: 'Popuni primjer',
       targetMarket: 'Ciljano tržište / regija',
       competitors: 'Konkurencija (ako postoji)',
-      submit: 'Analiziraj ideju',
-      footer: 'Besplatno · 50 simuliranih kupaca · ~30 sekundi',
+      submit: 'Pošalji ideju na ispitivanje',
+      footer: '100 simuliranih kupaca · ~30 sekundi · brojke iz koda',
       unlockManual: 'Kreni',
-      uploadShow: 'Dodaj dokument o svojoj ideji',
+      uploadShow: 'Dodaj dokument',
       uploadHide: 'Sakrij dokument',
-      readyTitle: 'Spremno za simulaciju',
+      readyTitle: 'Spremno za ispitivanje',
       missingTitle: 'Još samo malo',
       readyHelp: 'Imas dovoljno za prvi test.',
       missingHelp: 'Popuni obavezna polja. Ne mora biti savrseno, samo dovoljno jasno.',
       missingCount: 'obavezna polja nedostaju',
-      modelLabels: { B2C: 'B2C (Kupci)', B2B: 'B2B (Tvrtke)', B2B2C: 'B2B2C (Oboje)' },
+      modelLabels: { B2C: 'B2C · Kupci', B2B: 'B2B · Tvrtke', B2B2C: 'B2B2C · Oboje' },
+      adaptiveTitle: 'Pitanja za ovaj biznis',
+      adaptiveSubtitle: 'Generirano iz tvoje prve rečenice. Svaki odgovor izoštrava simulaciju.',
+      step1: 'Korak 1 — ideja u jednoj rečenici',
+      step1Help: 'AI iz nje složi brief i otvori ostatak protokola.',
+      example2: 'Primjer',
+      aiFill: 'AI ispuni',
+      restNote: 'Ostatak se otvara nakon ovog koraka.',
+      briefPlaceholder: 'Opiši ideju u jednoj rečenici...',
+      preparing: 'Pripremam...',
+      docTitle: 'Dodatni dokument',
+      docSub: 'Pitch, biljeske, PDF, DOC/DOCX, TXT ili MD — opcionalni kontekst.',
+      docAttach: 'Dodaj dokument',
+      docAttached: 'Dodano:',
+      docRemove: 'Ukloni',
     },
     en: {
       basicsTitle: 'Basics for validation',
@@ -459,22 +516,36 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
       detailedHelp: '3-5 sentences are enough.',
       price: 'Price and billing model',
       priceHelp: 'If you do not know the price, enter an assumption or range.',
-      advancedShow: 'Add more detail (optional)',
-      advancedHide: 'Hide advanced fields',
+      advancedShow: 'Extra detail — market, competition, document (optional)',
+      advancedHide: 'Hide extra detail',
       example: 'Fill example',
       targetMarket: 'Target market / region',
       competitors: 'Competition (if any)',
-      submit: 'Analyze idea',
-      footer: 'Free · 50 simulated buyers · ~30 seconds',
+      submit: 'Send the idea for examination',
+      footer: '100 simulated buyers · ~30 seconds · numbers from code',
       unlockManual: 'Start',
-      uploadShow: 'Add a document about your idea',
+      uploadShow: 'Add document',
       uploadHide: 'Hide document',
-      readyTitle: 'Ready for simulation',
+      readyTitle: 'Ready for examination',
       missingTitle: 'Almost there',
       readyHelp: 'You have enough for the first test.',
       missingHelp: 'Fill the required fields. It does not need to be perfect, just clear enough.',
       missingCount: 'required fields missing',
-      modelLabels: { B2C: 'B2C (Consumers)', B2B: 'B2B (Businesses)', B2B2C: 'B2B2C (Both)' },
+      modelLabels: { B2C: 'B2C · Consumers', B2B: 'B2B · Businesses', B2B2C: 'B2B2C · Both' },
+      adaptiveTitle: 'Questions for this business',
+      adaptiveSubtitle: 'Generated from your first sentence. Every answer sharpens the simulation.',
+      step1: 'Step 1 — the idea in one sentence',
+      step1Help: 'The AI builds a brief from it and opens the rest of the protocol.',
+      example2: 'Example',
+      aiFill: 'AI fill',
+      restNote: 'The rest opens after this step.',
+      briefPlaceholder: 'Describe your idea in one sentence...',
+      preparing: 'Preparing...',
+      docTitle: 'Supporting document',
+      docSub: 'Pitch, notes, PDF, DOC/DOCX, TXT or MD — optional context.',
+      docAttach: 'Attach file',
+      docAttached: 'Attached:',
+      docRemove: 'Remove',
     },
   }[language];
 
@@ -491,27 +562,29 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
   const missingRequiredCount = requiredValues.length - filledRequiredCount;
   const isReadyForValidation = missingRequiredCount === 0;
 
+  const labelClass = 'kicker !text-[var(--ink-soft)] mb-1.5 block';
+  const requiredMark = <span className="text-[var(--verdict-red)]"> *</span>;
+
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-none space-y-4">
-      <section className="rounded-[1.6rem] border border-zinc-800/70 bg-zinc-900/35 p-4 shadow-[0_30px_80px_rgba(0,0,0,0.18)] sm:p-5">
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <form onSubmit={handleSubmit} className="w-full space-y-6">
+      {/* ── Korak 1: jedna rečenica ── */}
+      <section>
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--hairline)] pb-2">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">AI PRVI KORAK</p>
-            <p className="mt-1 text-sm font-medium text-zinc-300">
-              {language === 'en' ? 'Write the idea in one sharp sentence.' : 'Napisi ideju u jednoj ostroj recenici.'}
-            </p>
+            <p className="kicker !text-[var(--verdict-red)]">{ui.step1}</p>
+            <p className="mt-1 text-sm text-[var(--ink-soft)]">{ui.step1Help}</p>
           </div>
           <button
             type="button"
             onClick={fillExample}
             disabled={isPreparingBrief}
-            className="self-start rounded-full border border-zinc-700 bg-zinc-900/80 px-3 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="link-ink font-data text-xs uppercase tracking-wider disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {language === 'en' ? 'Use example' : 'Primjer'}
+            {ui.example2} ↓
           </button>
         </div>
 
-        <div className="relative rounded-[1.4rem] border border-indigo-900/40 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.10),_transparent_40%),rgba(9,9,11,0.86)] p-3 sm:p-4">
+        <div className="mt-4">
           <textarea
             value={initialBrief}
             onFocus={() => {
@@ -523,442 +596,368 @@ export default function IdeaForm({ onIdeaReady, onError }: Props) {
               if (briefError) setBriefError('');
             }}
             rows={3}
-            placeholder={
-              briefGhostText || (
-                language === 'en'
-                  ? 'Describe your idea in one sentence...'
-                  : 'Opiši ideju u jednoj rečenici...'
-              )
-            }
-            className="w-full resize-none rounded-[1.2rem] border border-zinc-800/80 bg-zinc-950/90 px-4 py-4 text-base text-zinc-100 placeholder-zinc-500 shadow-inner transition-colors focus:border-indigo-500 focus:outline-none sm:min-h-[132px] sm:pr-36"
+            placeholder={briefGhostText || ui.briefPlaceholder}
+            className="paper-field min-h-[110px] resize-none text-base"
           />
-          <button
-            type="button"
-            onClick={prepareFromBrief}
-            disabled={isPreparingBrief}
-            className="mt-3 w-full rounded-[1rem] bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-950/40 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:absolute sm:bottom-4 sm:right-4 sm:mt-0 sm:w-auto"
-          >
-            {isPreparingBrief
-              ? language === 'en' ? 'Preparing...' : 'Pripremam...'
-              : ui.unlockManual}
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={prepareFromBrief} disabled={isPreparingBrief} className="btn-ink text-sm">
+              {isPreparingBrief ? ui.preparing : `${ui.unlockManual} →`}
+            </button>
+            <span className="font-data text-[11px] uppercase tracking-wider text-[var(--ink-faint)]">
+              {ui.restNote}
+            </span>
+          </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs">
-          <button
-            type="button"
-            onClick={prepareFromBrief}
-            disabled={isPreparingBrief}
-            className="rounded-full border border-zinc-800 bg-zinc-950/50 px-3 py-1.5 font-semibold text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isPreparingBrief
-              ? language === 'en' ? 'Preparing...' : 'Pripremam...'
-              : language === 'en' ? 'AI fill' : 'AI ispuni'}
-          </button>
-          <span className="text-zinc-700">•</span>
-          <span className="text-zinc-500">
-            {language === 'en' ? 'The rest opens after this step.' : 'Ostatak se otvara nakon ovog koraka.'}
-          </span>
-        </div>
-
-        {briefError && <p className="mt-2 text-sm text-red-300">{briefError}</p>}
+        {briefError && <p className="mt-2 text-sm font-semibold text-[var(--verdict-red)]">{briefError}</p>}
       </section>
 
       {formUnlocked && (
-      <>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_320px] xl:items-start">
-      <div className="space-y-4">
-      <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/45 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-bold text-white">{ui.basicsTitle}</p>
-            <p className="mt-1 text-xs leading-relaxed text-zinc-500">{ui.basicsSubtitle}</p>
-          </div>
-          <div className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold ${
-            isReadyForValidation
-              ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-300'
-              : 'border-amber-700/60 bg-amber-950/30 text-amber-200'
-          }`}>
-            {filledRequiredCount}/{requiredValues.length}
-          </div>
-        </div>
-      </div>
+        <>
+          {/* AI vodstvo + kategorija — traka odmah ispod briefa */}
+          {(aiGuidance || inferredCategory) && (
+            <div className="border-l-2 border-[var(--annotate)] py-1 pl-3">
+              {inferredCategory && (
+                <span className="font-data text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--annotate)]">
+                  {inferredCategory}
+                </span>
+              )}
+              {aiGuidance && <p className="mt-1 text-sm italic leading-relaxed text-[var(--ink-soft)]">{aiGuidance}</p>}
+            </div>
+          )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Model poslovanja */}
-        <div className="lg:col-span-2">
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            {ui.businessModel} <span className="text-indigo-400">*</span>
-          </label>
-          <div className="grid grid-cols-1 gap-2 rounded-xl border border-zinc-800 bg-zinc-900/90 p-1 sm:grid-cols-3">
-            {(['B2C', 'B2B', 'B2B2C'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setForm((prev) => ({ ...prev, business_model: mode }))}
-                className={`py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                  form.business_model === mode
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+          {/* ── Korak 2: osnovna polja — jedna fokusirana kolona ── */}
+          <section>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--hairline)] pb-2">
+              <div>
+                <p className="kicker">{ui.basicsTitle}</p>
+                <p className="mt-1 text-sm text-[var(--ink-soft)]">{ui.basicsSubtitle}</p>
+              </div>
+              <span
+                className={`font-data text-xs font-semibold ${
+                  isReadyForValidation ? 'text-[var(--verdict-green)]' : 'text-[var(--verdict-red)]'
                 }`}
               >
-                {ui.modelLabels[mode]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            {ui.productName} <span className="text-indigo-400">*</span>
-          </label>
-          <input
-            value={form.product_name}
-            onChange={set('product_name')}
-            onFocus={() => clearExampleHint('product_name')}
-            placeholder={exampleFieldHints.product_name || 'npr. TaskFlow, BudgetBuddy, QuickDocs...'}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            {ui.pitch} <span className="text-indigo-400">*</span>
-          </label>
-          <input
-            value={form.elevator_pitch}
-            onChange={set('elevator_pitch')}
-            onFocus={() => clearExampleHint('elevator_pitch')}
-            placeholder={exampleFieldHints.elevator_pitch || placeholders.elevator_pitch}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-            required
-          />
-        </div>
-
-        {form.business_model === 'B2B2C' ? (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                {language === 'en' ? 'Description for end consumers (B2C)' : 'Opis za krajnje korisnike (B2C)'} <span className="text-indigo-400">*</span>
-              </label>
-              <textarea
-                value={form.b2b2c_consumer_description || ''}
-                onChange={set('b2b2c_consumer_description')}
-                rows={3}
-                placeholder={language === 'en' ? 'Describe the consumer-facing app, features, convenience, and personal value...' : 'Opiši aplikaciju, značajke, jednostavnost i vrijednost za krajnjeg korisnika...'}
-                className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                {language === 'en' ? 'Description for business partners (B2B)' : 'Opis za poslovne partnere (B2B)'} <span className="text-indigo-400">*</span>
-              </label>
-              <textarea
-                value={form.b2b2c_business_description || ''}
-                onChange={set('b2b2c_business_description')}
-                rows={3}
-                placeholder={language === 'en' ? 'Describe the value proposition for partners, monetization, commissions, or ROI...' : 'Opiši vrijednost za poslovne partnere, zaradu, provizije ili ROI...'}
-                className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-                required
-              />
-            </div>
-          </>
-        ) : (
-          <div className="lg:col-span-2">
-            <label className="block text-sm font-medium text-zinc-300 mb-1">
-              {ui.detailed} <span className="text-indigo-400">*</span>
-            </label>
-            <textarea
-              value={form.detailed_description}
-              onChange={set('detailed_description')}
-              onFocus={() => clearExampleHint('detailed_description')}
-              rows={4}
-              placeholder={exampleFieldHints.detailed_description || placeholders.detailed_description}
-              className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-              required
-            />
-            <p className="mt-1 text-xs text-zinc-500">{ui.detailedHelp}</p>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            {ui.price} <span className="text-indigo-400">*</span>
-          </label>
-          <input
-            value={form.price_model}
-            onChange={set('price_model')}
-            onFocus={() => clearExampleHint('price_model')}
-            placeholder={exampleFieldHints.price_model || placeholders.price_model}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-            required
-          />
-          <p className="mt-1 text-xs text-zinc-500">{ui.priceHelp}</p>
-        </div>
-      </div>
-      </div>
-
-      {adaptiveQuestions.length > 0 && (
-        <section className="rounded-2xl border border-cyan-900/40 bg-cyan-950/10 overflow-hidden">
-          <div className="border-b border-cyan-900/40 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-cyan-200">
-                  {language === 'en' ? 'Adaptive questions for this business' : 'Prilagođena pitanja za ovaj biznis'}
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                  {language === 'en'
-                    ? 'Generated from your first sentence.'
-                    : 'Generirano iz tvoje prve recenice.'}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full border border-cyan-700/60 px-3 py-1 text-xs font-semibold text-cyan-200">
-                {completedAdaptiveCount}/{adaptiveQuestions.length}
+                {filledRequiredCount}/{requiredValues.length}
               </span>
             </div>
-          </div>
-          <div className="grid gap-3 p-4 lg:grid-cols-2">
-            {adaptiveQuestions.map((item, index) => (
-              <div key={`${item.id}-${item.question}`} className="rounded-xl border border-zinc-800/80 bg-zinc-950/55 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
-                <label className="block text-sm font-semibold text-zinc-100 mb-1">
-                  <span className="text-cyan-400">{index + 1}.</span> {item.question}
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {/* Model poslovanja */}
+              <div className="sm:col-span-2">
+                <label className={labelClass}>
+                  {ui.businessModel}
+                  {requiredMark}
                 </label>
-                <textarea
-                  value={adaptiveByQuestion.get(item.question) ?? ''}
-                  onChange={(event) => setAdaptiveAnswer(item.question, item.category, event.target.value)}
-                  rows={2}
-                  placeholder={item.placeholder}
-                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors focus:border-cyan-500 focus:outline-none"
-              />
-            </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/35 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowOfficeHours((v) => !v)}
-          className="flex w-full flex-col gap-3 p-4 text-left transition-colors hover:bg-zinc-900/60 sm:flex-row sm:items-start sm:justify-between"
-        >
-          <span>
-            <span className="block text-sm font-bold text-zinc-200">{officeHours.title}</span>
-            <span className="block text-xs text-zinc-500 leading-relaxed mt-1">{officeHours.subtitle}</span>
-          </span>
-          <span className="shrink-0 self-start rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-300">
-            {showOfficeHours ? officeHours.hide : officeHours.show}
-            {completedDiscoveryCount > 0 ? ` · ${completedDiscoveryCount}/6` : ''}
-          </span>
-        </button>
-
-        {showOfficeHours && (
-          <div className="grid gap-3 border-t border-zinc-800 p-4 lg:grid-cols-2">
-            {officeHours.questions.map((item, index) => (
-              <div key={item.question} className="rounded-xl border border-zinc-800/80 bg-zinc-950/55 p-3 shadow-[0_8px_24px_rgba(0,0,0,0.10)]">
-                <label className="block text-sm font-semibold text-zinc-100 mb-1">
-                  <span className="text-cyan-400">{index + 1}.</span> {item.question}
-                </label>
-                <p className="text-[11px] text-zinc-500 mb-2 leading-relaxed">{item.help}</p>
-                <textarea
-                  value={discoveryByQuestion.get(item.question) ?? ''}
-                  onChange={(event) => setDiscoveryAnswer(item.question, item.category, event.target.value)}
-                  rows={2}
-                  placeholder={officeHours.placeholder}
-                className="w-full resize-none rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 transition-colors focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <button
-        type="button"
-        onClick={() => setShowAdvanced((v) => !v)}
-        className="inline-flex items-center gap-2 self-start rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-sm text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200"
-      >
-        <span className="text-lg leading-none">{showAdvanced ? '−' : '+'}</span>
-        {showAdvanced ? ui.advancedHide : ui.advancedShow}
-      </button>
-
-      {showAdvanced && (
-        <div className="grid gap-4 border border-zinc-800 rounded-2xl p-4 bg-zinc-900/50 lg:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">
-              {ui.targetMarket}
-            </label>
-            <input
-              value={form.target_market}
-              onChange={set('target_market')}
-              onFocus={() => clearExampleHint('target_market')}
-              placeholder={exampleFieldHints.target_market || 'npr. freelanceri u EU, mala poduzeća u DACH regiji...'}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-            />
-          </div>
-          <AreaMapPicker
-            language={language}
-            value={form.geo_area}
-            values={form.geo_areas}
-            onChange={(geo_area, geo_areas) => {
-              setForm((prev) => ({
-                ...prev,
-                geo_area,
-                geo_areas,
-                target_market: geo_areas?.map((area) => area.label).join(' + ') || geo_area?.label || prev.target_market,
-              }));
-            }}
-          />
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">
-              {placeholders.assumed_customer_label}
-            </label>
-            <input
-              value={form.assumed_customer}
-              onChange={set('assumed_customer')}
-              onFocus={() => clearExampleHint('assumed_customer')}
-              placeholder={exampleFieldHints.assumed_customer || placeholders.assumed_customer}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">
-              {ui.competitors}
-            </label>
-            <input
-              value={form.competitors}
-              onChange={set('competitors')}
-              onFocus={() => clearExampleHint('competitors')}
-              placeholder={exampleFieldHints.competitors || 'npr. Notion, Trello, ručne Excel tablice...'}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">
-              {placeholders.website_url_label}
-            </label>
-            <input
-              value={form.website_url}
-              onChange={set('website_url')}
-              placeholder={placeholders.website_url_placeholder}
-              className="w-full rounded-xl border border-zinc-700 bg-zinc-800/90 px-4 py-3 text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none"
-            />
-          </div>
-        </div>
-      )}
-      <aside className="xl:sticky xl:top-6">
-        <div className="space-y-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/55 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-          <div className="flex flex-col gap-2">
-            {inferredCategory && (
-              <span className="self-start rounded-full border border-cyan-700/60 bg-cyan-950/40 px-3 py-1 text-xs font-semibold text-cyan-100">
-                {inferredCategory}
-              </span>
-            )}
-            {aiGuidance && (
-              <div className="rounded-xl border border-cyan-900/50 bg-cyan-950/15 p-3 text-sm leading-relaxed text-cyan-50">
-                {aiGuidance}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold text-zinc-200">
-                  {language === 'en' ? 'Supporting document' : 'Dodatni dokument'}
-                </p>
-                <p className="mt-1 text-[11px] text-zinc-500">
-                  {language === 'en' ? 'Optional extra context.' : 'Opcionalni dodatni kontekst.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowDocumentUpload((value) => !value)}
-                className="inline-flex items-center gap-2 text-left text-xs font-semibold text-cyan-200 transition-colors hover:text-white"
-              >
-                <FileText className="h-4 w-4" />
-                {showDocumentUpload ? ui.uploadHide : ui.uploadShow}
-              </button>
-            </div>
-
-            {showDocumentUpload && (
-              <div className="mt-3 space-y-3">
-                <p className="text-[11px] leading-relaxed text-zinc-500">
-                  {language === 'en'
-                    ? 'Attach a pitch, notes, PDF, DOC/DOCX, TXT or MD.'
-                    : 'Dodaj pitch, biljeske, PDF, DOC/DOCX, TXT ili MD.'}
-                </p>
-                <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-cyan-800/70 bg-cyan-950/25 px-4 py-2 text-xs font-bold text-cyan-100 transition-colors hover:border-cyan-400 hover:text-white">
-                  <FileText className="h-4 w-4" />
-                  {language === 'en' ? 'Attach file' : 'Dodaj dokument'}
-                  <input
-                    type="file"
-                    accept=".txt,.md,.markdown,.pdf,.doc,.docx,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*"
-                    className="hidden"
-                    onChange={handleDocumentUpload}
-                  />
-                </label>
-                {documentName && (
-                  <div className="rounded-lg border border-cyan-900/40 bg-cyan-950/15 px-3 py-2">
-                    <p className="truncate text-xs font-semibold text-cyan-100">
-                      {language === 'en' ? 'Attached:' : 'Dodano:'} {documentName}
-                    </p>
+                <div className="grid grid-cols-3 border border-[var(--hairline-strong)] rounded-[3px] overflow-hidden">
+                  {(['B2C', 'B2B', 'B2B2C'] as const).map((mode) => (
                     <button
+                      key={mode}
                       type="button"
-                      onClick={clearDocumentUpload}
-                      className="mt-2 text-left text-xs font-bold text-zinc-400 hover:text-red-300"
+                      onClick={() => setForm((prev) => ({ ...prev, business_model: mode }))}
+                      className={`font-data cursor-pointer border-r border-[var(--hairline-strong)] px-2 py-2.5 text-xs font-semibold uppercase tracking-wide transition-colors last:border-r-0 ${
+                        form.business_model === mode
+                          ? 'bg-[var(--ink)] text-[var(--paper)]'
+                          : 'bg-[var(--paper-raised)] text-[var(--ink-soft)] hover:bg-[var(--paper-dim)]'
+                      }`}
                     >
-                      {language === 'en' ? 'Remove' : 'Ukloni'}
+                      {ui.modelLabels[mode]}
                     </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>
+                  {ui.productName}
+                  {requiredMark}
+                </label>
+                <input
+                  value={form.product_name}
+                  onChange={set('product_name')}
+                  onFocus={() => clearExampleHint('product_name')}
+                  placeholder={exampleFieldHints.product_name || 'npr. TaskFlow, BudgetBuddy, QuickDocs...'}
+                  className="paper-field"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={labelClass}>
+                  {ui.pitch}
+                  {requiredMark}
+                </label>
+                <input
+                  value={form.elevator_pitch}
+                  onChange={set('elevator_pitch')}
+                  onFocus={() => clearExampleHint('elevator_pitch')}
+                  placeholder={exampleFieldHints.elevator_pitch || placeholders.elevator_pitch}
+                  className="paper-field"
+                  required
+                />
+              </div>
+
+              {form.business_model === 'B2B2C' ? (
+                <>
+                  <div>
+                    <label className={labelClass}>
+                      {language === 'en' ? 'Description for end consumers (B2C)' : 'Opis za krajnje korisnike (B2C)'}
+                      {requiredMark}
+                    </label>
+                    <textarea
+                      value={form.b2b2c_consumer_description || ''}
+                      onChange={set('b2b2c_consumer_description')}
+                      rows={3}
+                      placeholder={language === 'en' ? 'Describe the consumer-facing app, features, convenience, and personal value...' : 'Opiši aplikaciju, značajke, jednostavnost i vrijednost za krajnjeg korisnika...'}
+                      className="paper-field resize-none"
+                      required
+                    />
                   </div>
-                )}
-                {documentError && <p className="text-xs text-red-300">{documentError}</p>}
+                  <div>
+                    <label className={labelClass}>
+                      {language === 'en' ? 'Description for business partners (B2B)' : 'Opis za poslovne partnere (B2B)'}
+                      {requiredMark}
+                    </label>
+                    <textarea
+                      value={form.b2b2c_business_description || ''}
+                      onChange={set('b2b2c_business_description')}
+                      rows={3}
+                      placeholder={language === 'en' ? 'Describe the value proposition for partners, monetization, commissions, or ROI...' : 'Opiši vrijednost za poslovne partnere, zaradu, provizije ili ROI...'}
+                      className="paper-field resize-none"
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="sm:col-span-2">
+                  <label className={labelClass}>
+                    {ui.detailed}
+                    {requiredMark}
+                  </label>
+                  <textarea
+                    value={form.detailed_description}
+                    onChange={set('detailed_description')}
+                    onFocus={() => clearExampleHint('detailed_description')}
+                    rows={4}
+                    placeholder={exampleFieldHints.detailed_description || placeholders.detailed_description}
+                    className="paper-field resize-none"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-[var(--ink-faint)]">{ui.detailedHelp}</p>
+                </div>
+              )}
+
+              <div className="sm:col-span-2">
+                <label className={labelClass}>
+                  {ui.price}
+                  {requiredMark}
+                </label>
+                <input
+                  value={form.price_model}
+                  onChange={set('price_model')}
+                  onFocus={() => clearExampleHint('price_model')}
+                  placeholder={exampleFieldHints.price_model || placeholders.price_model}
+                  className="paper-field"
+                  required
+                />
+                <p className="mt-1 text-xs text-[var(--ink-faint)]">{ui.priceHelp}</p>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Prilagođena pitanja — centralno, ne sa strane ── */}
+          {adaptiveQuestions.length > 0 && (
+            <section>
+              <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--hairline)] pb-2">
+                <div>
+                  <p className="kicker !text-[var(--annotate)]">{ui.adaptiveTitle}</p>
+                  <p className="mt-1 text-sm text-[var(--ink-soft)]">{ui.adaptiveSubtitle}</p>
+                </div>
+                <span className="font-data text-xs font-semibold text-[var(--annotate)]">
+                  {completedAdaptiveCount}/{adaptiveQuestions.length}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {adaptiveQuestions.map((item, index) => (
+                  <div key={`${item.id}-${item.question}`}>
+                    <label className="mb-1.5 block text-sm font-semibold text-[var(--ink)]">
+                      <span className="font-data text-[var(--annotate)]">{index + 1}.</span> {item.question}
+                    </label>
+                    <textarea
+                      value={adaptiveByQuestion.get(item.question) ?? ''}
+                      onChange={(event) => setAdaptiveAnswer(item.question, item.category, event.target.value)}
+                      rows={2}
+                      placeholder={item.placeholder}
+                      className="paper-field resize-none text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── Office Hours (collapsible) ── */}
+          <section className="border-t border-[var(--hairline)] pt-4">
+            <button
+              type="button"
+              onClick={() => setShowOfficeHours((v) => !v)}
+              className="flex w-full cursor-pointer items-baseline justify-between gap-3 text-left"
+            >
+              <span>
+                <span className="kicker">{officeHours.title}</span>
+                <span className="mt-1 block text-sm text-[var(--ink-soft)]">{officeHours.subtitle}</span>
+              </span>
+              <span className="link-ink font-data shrink-0 text-xs uppercase tracking-wider">
+                {showOfficeHours ? officeHours.hide : officeHours.show}
+                {completedDiscoveryCount > 0 ? ` · ${completedDiscoveryCount}/6` : ''} {showOfficeHours ? '−' : '+'}
+              </span>
+            </button>
+
+            {showOfficeHours && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {officeHours.questions.map((item, index) => (
+                  <div key={item.question}>
+                    <label className="mb-1 block text-sm font-semibold text-[var(--ink)]">
+                      <span className="font-data text-[var(--verdict-red)]">{index + 1}.</span> {item.question}
+                    </label>
+                    <p className="mb-1.5 text-[11px] leading-relaxed text-[var(--ink-faint)]">{item.help}</p>
+                    <textarea
+                      value={discoveryByQuestion.get(item.question) ?? ''}
+                      onChange={(event) => setDiscoveryAnswer(item.question, item.category, event.target.value)}
+                      rows={2}
+                      placeholder={officeHours.placeholder}
+                      className="paper-field resize-none text-sm"
+                    />
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+          </section>
 
-          <div className={`rounded-2xl border p-4 ${
-            isReadyForValidation
-              ? 'border-emerald-800/50 bg-emerald-950/20'
-              : 'border-amber-800/50 bg-amber-950/15'
-          }`}>
-            <div className="flex flex-col gap-3">
+          {/* ── Dodatni detalji (collapsible): tržište, konkurencija, mapa, dokument ── */}
+          <section className="border-t border-[var(--hairline)] pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="flex w-full cursor-pointer items-baseline justify-between gap-3 text-left"
+            >
+              <span className="kicker">{showAdvanced ? ui.advancedHide : ui.advancedShow}</span>
+              <span className="link-ink font-data shrink-0 text-xs">{showAdvanced ? '−' : '+'}</span>
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>{ui.targetMarket}</label>
+                  <input
+                    value={form.target_market}
+                    onChange={set('target_market')}
+                    onFocus={() => clearExampleHint('target_market')}
+                    placeholder={exampleFieldHints.target_market || 'npr. freelanceri u EU, mala poduzeća u DACH regiji...'}
+                    className="paper-field"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>{placeholders.assumed_customer_label}</label>
+                  <input
+                    value={form.assumed_customer}
+                    onChange={set('assumed_customer')}
+                    onFocus={() => clearExampleHint('assumed_customer')}
+                    placeholder={exampleFieldHints.assumed_customer || placeholders.assumed_customer}
+                    className="paper-field"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>{ui.competitors}</label>
+                  <input
+                    value={form.competitors}
+                    onChange={set('competitors')}
+                    onFocus={() => clearExampleHint('competitors')}
+                    placeholder={exampleFieldHints.competitors || 'npr. Notion, Trello, ručne Excel tablice...'}
+                    className="paper-field"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>{placeholders.website_url_label}</label>
+                  <input
+                    value={form.website_url}
+                    onChange={set('website_url')}
+                    placeholder={placeholders.website_url_placeholder}
+                    className="paper-field"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <AreaMapPicker
+                    language={language}
+                    value={form.geo_area}
+                    values={form.geo_areas}
+                    onChange={(geo_area, geo_areas) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        geo_area,
+                        geo_areas,
+                        target_market: geo_areas?.map((area) => area.label).join(' + ') || geo_area?.label || prev.target_market,
+                      }));
+                    }}
+                  />
+                </div>
+
+                {/* Dokument */}
+                <div className="sm:col-span-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div>
+                      <p className="kicker !text-[var(--ink-soft)]">{ui.docTitle}</p>
+                      <p className="mt-1 text-xs text-[var(--ink-faint)]">{ui.docSub}</p>
+                    </div>
+                    <label className="btn-line cursor-pointer !py-2 !px-4 text-xs">
+                      <FileText className="h-3.5 w-3.5" />
+                      {ui.docAttach}
+                      <input
+                        type="file"
+                        accept=".txt,.md,.markdown,.pdf,.doc,.docx,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*"
+                        className="hidden"
+                        onChange={handleDocumentUpload}
+                      />
+                    </label>
+                  </div>
+                  {documentName && (
+                    <div className="mt-2 flex items-baseline gap-3 border-l-2 border-[var(--verdict-green)] pl-3">
+                      <p className="font-data truncate text-xs font-semibold text-[var(--ink)]">
+                        {ui.docAttached} {documentName}
+                      </p>
+                      <button type="button" onClick={clearDocumentUpload} className="link-ink shrink-0 text-xs">
+                        {ui.docRemove}
+                      </button>
+                    </div>
+                  )}
+                  {documentError && <p className="mt-2 text-xs font-semibold text-[var(--verdict-red)]">{documentError}</p>}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* ── Submit traka: status + akcija, uvijek na dnu protokola ── */}
+          <section className="border-t-2 border-[var(--ink)] pt-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                  {language === 'en' ? 'Validation status' : 'Status validacije'}
+                <p
+                  className={`font-data text-xs font-semibold uppercase tracking-[0.15em] ${
+                    isReadyForValidation ? 'text-[var(--verdict-green)]' : 'text-[var(--verdict-red)]'
+                  }`}
+                >
+                  {isReadyForValidation ? `✓ ${ui.readyTitle}` : `${ui.missingTitle} — ${missingRequiredCount} ${ui.missingCount}`}
                 </p>
-                <p className={`text-sm font-bold ${isReadyForValidation ? 'text-emerald-200' : 'text-amber-200'}`}>
-                  {isReadyForValidation ? ui.readyTitle : ui.missingTitle}
-                </p>
-                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                <p className="mt-1 text-xs text-[var(--ink-faint)]">
                   {isReadyForValidation ? ui.readyHelp : ui.missingHelp}
                 </p>
               </div>
-              {!isReadyForValidation && (
-                <span className="self-start rounded-full border border-amber-700/60 px-3 py-1 text-xs font-bold text-amber-200">
-                  {missingRequiredCount} {ui.missingCount}
-                </span>
-              )}
+              <button type="submit" disabled={!isReadyForValidation} className="btn-ink shrink-0 text-base">
+                {ui.submit} →
+              </button>
             </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={!isReadyForValidation}
-            className="w-full rounded-xl bg-indigo-600 py-4 text-lg font-semibold text-white shadow-lg shadow-indigo-950/40 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600"
-          >
-            <span>{isReadyForValidation ? ui.submit : `${ui.missingTitle} (${missingRequiredCount})`}</span>
-          </button>
-
-          <p className="text-center text-xs text-zinc-500">
-            {ui.footer}
-          </p>
-        </div>
-      </aside>
-      </div>
-      </>
+            <p className="font-data mt-3 text-[11px] uppercase tracking-[0.15em] text-[var(--ink-faint)]">{ui.footer}</p>
+          </section>
+        </>
       )}
     </form>
   );

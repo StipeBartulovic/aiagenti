@@ -5,13 +5,10 @@ import { useRouter } from 'next/navigation';
 import IdeaForm from '@/components/IdeaForm';
 import AudiencePicker from '@/components/AudiencePicker';
 import LoadingScreen from '@/components/LoadingScreen';
-import TokenWallet from '@/components/TokenWallet';
-import SetupStatus from '@/components/SetupStatus';
 import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, addSimulatedPurchase, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
-import { Settings2 } from 'lucide-react';
 import type { IdeaFormData, SegmentSpec } from '@/lib/types';
 
 export default function Home() {
@@ -20,7 +17,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [loadingAudiences, setLoadingAudiences] = useState(false);
   const [error, setError] = useState('');
-  const [mockTab, setMockTab] = useState<'summary' | 'objections' | 'questions'>('summary');
+  const [topupNotice, setTopupNotice] = useState(false);
   const [hasStoredReport, setHasStoredReport] = useState(() =>
     typeof window !== 'undefined' ? Boolean(window.sessionStorage.getItem('aivalidator_report')) : false
   );
@@ -55,7 +52,7 @@ export default function Home() {
   };
 
   const requireTokens = (cost: number, label: string) => {
-    const result = spendTokens(cost);
+    const result = spendTokens(cost, label);
     if (result.ok) return true;
     setError(tokenShortfallMessage(language, label, cost, result.missing));
     return false;
@@ -63,7 +60,7 @@ export default function Home() {
 
   // Pokreni punu simulaciju (s odabranim segmentima ili bez njih = generička publika)
   const runValidate = async (form: IdeaFormData) => {
-    if (!requireTokens(TOKEN_COSTS.validation, language === 'en' ? 'Validation with 50 personas' : 'Validacija s 50 persona')) return;
+    if (!requireTokens(TOKEN_COSTS.validation, language === 'en' ? 'Validation with simulated buyers' : 'Validacija sa simuliranim kupcima')) return;
     setError('');
     setCandidates(null);
     setLoading(true);
@@ -115,521 +112,388 @@ export default function Home() {
 
   const t = {
     hr: {
-      title1: 'Testiraj ideju ',
-      title2: 'prije gradnje',
-      heroSubtitle: 'Upisi ideju i odmah vidi kupuje li pricu itko osim tebe.',
-      heroProof: ['50 AI persona', 'glavni prigovori', 'prvi test'],
-      howItWorks: 'Kako funkcionira',
-      steps: [
-        { title: 'Napiši ideju', desc: 'Dovoljna je jedna recenica.' },
-        { title: 'Dobij signal', desc: 'Vidis sto prolazi, a sto zapinje.' },
-        { title: 'Pokreni test', desc: 'Dobij prvi potez za van.' },
-      ],
-      disclaimer: 'Disclaimer: AI Validator simulira tržišne reakcije koristeći AI persone, ne prave korisnike. Koristi rezultate kao smjernicu za rano testiranje ideja, ne kao garanciju tržišnog uspjeha.',
-      loadingText: 'Učitavam...',
+      wordmarkSub: 'ured za tržišnu istinu',
+      navProjects: 'Projekti',
+      navPlan: 'Biznis plan',
+      navMarket: 'Tržište',
+      navSettings: 'Postavke',
+      heroKicker: 'Protokol 01 — simulirana validacija',
+      heroTitle1: 'Neka ti ideja padne ovdje,',
+      heroTitle2: 'a ne na tržištu.',
+      heroSub:
+        'Upiši ideju u jednoj rečenici. Sto simuliranih kupaca — skeptičnih, s vlastitim navikama i budžetima — ispita je kroz JTBD protokol. Dobiješ verdikt, prigovore i brojke izračunate u kodu, ne nagađane.',
+      realTest: 'stvaran test iz razvoja',
+      realTestLine: 'FitMeal · kupuje 8% · odbija 52% · prilika 28/100',
+      continueReport: 'Vrati zadnji izvještaj →',
       findingAudiences: 'Tražim ciljane publike za tvoju ideju...',
-      logoutBtn: 'Odjavi se',
-      myProjectsBtn: 'Moji projekti',
-      workspaceTitle: 'Lokalni profil i tokeni',
-      workspaceSubtitle: 'Otvori tek kad krenes spremati rad i trositi tokene.',
-      stats: [
-        { value: '50+', label: 'AI persona po testu' },
-        { value: '2', label: 'glavna next-step smjera' },
-        { value: '~30s', label: 'do prvog izvjestaja' },
+      protocolKicker: 'Protokol — što se dogodi s tvojom idejom',
+      protocolSteps: [
+        {
+          n: '01',
+          title: 'Brief',
+          desc: 'Jedna rečenica je dovoljna. AI složi brief i postavi pitanja specifična baš za tvoj biznis.',
+        },
+        {
+          n: '02',
+          title: 'Ispitivanje',
+          desc: 'Sto persona s psihografijom, ulogom i budžetom reagira na ideju. Petnaest posto ih je namjerno neprijateljski — da laskanje ne prođe.',
+        },
+        {
+          n: '03',
+          title: 'Brojke',
+          desc: 'Score, prilika (JTBD) i prirodne skupine kupaca računaju se u kodu. Jezični model ne smije izmisliti nijedan postotak.',
+        },
+        {
+          n: '04',
+          title: 'Verdikt',
+          desc: 'Razlozi odbijanja, prava konkurencija, analiza cijene, intervju-kit za prave razgovore i plan preokreta.',
+        },
       ],
-      previewTitle: 'Primjer izvjestaja',
-      previewSubtitle: 'Brzi pregled izlaza nakon prve validacije.',
-      pricingTitle: 'Tokeni kad ti zatrebaju',
-      pricingSubtitle: 'Bez pretplate. Trosis samo kad stvarno koristis AI.',
-      pricingPlans: [
-        { name: 'Startni bonus', price: '3.600', period: ' tokena', desc: 'Dobijes ga automatski pri prvom otvaranju lokalnog profila.', features: ['1 validacija s 50 persona', 'Prijedlog ciljanih publika', 'Nekoliko report alata', 'Oko 10 brzih upita savjetnicima', 'Bez kartice i bez pretplate'], btn: 'Kreni besplatno', active: false },
-        { name: 'Test top-up', price: '10€', period: ' = 10.000 tokena', desc: 'Simulirana kupnja za testiranje UX-a naplate.', features: ['Klik i tokeni se odmah dodaju', 'Nema checkouta ni stvarne naplate', 'Tokeni se trose po akciji', 'Saldo ostaje u ovom browseru', 'Kasnije se spaja na pravi payment'], btn: 'Dodaj 10€ tokena', active: true },
-        { name: 'Pay as you go', price: '0€', period: ' mjesecno', desc: 'Nema mjesecne obveze. Placas samo kad koristis AI.', features: ['Validacija: 1.200 tokena', 'Report alati: 250-550 tokena', 'Savjetnik: 140 tokena', 'Dublji savjetnik: 380 tokena', 'Memorija i taskovi: mali dodatni trosak'], btn: 'Pogledaj wallet', active: false },
+      verdictKicker: 'Primjer verdikta',
+      verdictNote: 'Output stvarnog testa iz razvoja. Nismo ga uljepšali — u tome je poanta.',
+      verdictProduct: 'FitMeal — AI planer obroka',
+      verdictMeta: 'B2C · 9,99 €/mj · 100 simuliranih kupaca',
+      verdictStamp: 'Odbijeno',
+      verdictRows: [
+        { label: 'Kupuje', value: '8%' },
+        { label: 'Možda', value: '40%' },
+        { label: 'Odbija', value: '52%' },
+        { label: 'Prilika (JTBD)', value: '28 / 100' },
+        { label: 'Prava konkurencija', value: 'MyFitnessPal + ručno planiranje' },
+        { label: 'Osvojiva skupina', value: 'Cjenovno osjetljivi pragmatici — 52%' },
+        { label: 'Prvi potez', value: 'Besplatni sloj; cijenu prikaži kao dnevni trošak' },
       ],
-      testimonialsTitle: 'Rani feedback',
-      testimonialsSubtitle: 'Kratki dojmovi ranih korisnika.',
-      testimonials: [
-        { quote: 'AI nam je ukazao na 3 ključna pitanja o privatnosti podataka koja su nam investitori postavili tjedan dana kasnije na pitchu. Spasilo nas je od nepripremljenosti.', author: 'Stjepan M., FinTech Founder' },
-        { quote: 'Umjesto tjedana i tisuća eura za prve ankete, testirao sam SaaS ideju za 30 sekundi i odmah uočio zašto bi je HR menadžeri odbili. Zlata vrijedi.', author: 'Ana K., SaaS Developer' },
+      tokensKicker: 'Cjenik u tokenima',
+      tokensSub: 'Bez pretplate. Trošiš samo kad stvarno koristiš AI.',
+      tokensRows: [
+        { label: 'Početni saldo', value: '3.600 tokena — besplatno' },
+        { label: 'Validacija (100 kupaca)', value: '1.200' },
+        { label: 'Report alati (cijena, intervjui, preokret…)', value: '250–550' },
+        { label: 'Pitanje savjetniku', value: '140' },
       ],
-      mockupHeader: 'Primjer: SignalBoard (Founder SaaS)',
-      mockupScore: 'Idea Score: 68/100',
-      mockupStats: 'Kupio bi: 38% | Mozda: 34% | Odbija: 28%',
-      mockTabs: { summary: 'Rezime', objections: 'Zid odbijanja', questions: 'Pitanja iz mase' },
-      mockSummary: 'SignalBoard izgleda obecavajuce za solo SaaS foundere koji vec rade intervjue, ali signal je jos mekan. Najveci problem nije interes nego dokaz da alat stvarno stedi vrijeme i da nije samo jos jedan ChatGPT wrapper.',
-      mockObjection: 'Ovo mi zvuci korisno, ali ne vidim zasto to ne bih slozio u Notionu i ChatGPT-u.',
-      mockObjection2: 'Nemam dovoljno stvarnih intervjua da bi mi dashboard sada imao smisla.',
-      mockQuestion: 'Koji tocno rezultat founder dobije nakon prvih 5 customer intervjua?',
-      mockQuestion2: 'Sto bi me uvjerilo da ovo skracuje put do prve placene validacije?',
-      mockAnswerPlaceholder: 'Upisi odgovor ili dodatni kontekst...',
-      mockButton: 'Simuliraj odgovor',
-      continueReport: 'Vrati zadnji izvjestaj',
+      topupBtn: 'Dodaj 10.000 test tokena',
+      topupNote: 'Simulacija naplate — bez kartice, saldo ostaje u ovom browseru.',
+      topupDone: 'Dodano. Saldo je u ovom browseru.',
+      honestyKicker: 'Pečat iskrenosti',
+      honestyBody:
+        'Ovo su simulirani kupci, ne pravi ljudi. Rezultat je smjernica za rano testiranje, ne dokaz tržišta. Zato sve postotke računamo u kodu, zato dio persona namjerno navija protiv tebe, i zato ti nikad nećemo reći samo ono što želiš čuti.',
+      footerLine: 'AI Validator · protokol v2 · bez lažnih recenzija',
       errorTitle: 'Analiza nije uspjela',
       errorHelp: 'Ništa nije izgubljeno. Možeš pokušati ponovno ili promijeniti opis ideje.',
       retry: 'Pokušaj ponovno',
       editIdea: 'Uredi ideju',
+      loadingText: 'Učitavam...',
     },
     en: {
-      title1: 'Test your idea ',
-      title2: 'before you build',
-      heroSubtitle: 'Type the idea and quickly see whether anyone buys the story besides you.',
-      heroProof: ['50 AI personas', 'top objections', 'first test'],
-      howItWorks: 'How it works',
-      steps: [
-        { title: 'Write the idea', desc: 'One sentence is enough.' },
-        { title: 'Get the signal', desc: 'See what lands and what breaks.' },
-        { title: 'Run the test', desc: 'Get the first move to take outside.' },
-      ],
-      disclaimer: 'Disclaimer: AI Validator simulates market reactions using AI personas, not real customers. Use results as a guideline for early testing, not as a guarantee of market success.',
-      loadingText: 'Loading...',
+      wordmarkSub: 'bureau of market truth',
+      navProjects: 'Projects',
+      navPlan: 'Business plan',
+      navMarket: 'Market',
+      navSettings: 'Settings',
+      heroKicker: 'Protocol 01 — simulated validation',
+      heroTitle1: 'Let your idea fail here,',
+      heroTitle2: 'not on the market.',
+      heroSub:
+        'Type your idea in one sentence. One hundred simulated buyers — skeptical, with their own habits and budgets — examine it through a JTBD protocol. You get a verdict, objections, and numbers computed in code, not guessed.',
+      realTest: 'real test from development',
+      realTestLine: 'FitMeal · buys 8% · rejects 52% · opportunity 28/100',
+      continueReport: 'Return to latest report →',
       findingAudiences: 'Finding target audiences for your idea...',
-      logoutBtn: 'Log out',
-      myProjectsBtn: 'My projects',
-      workspaceTitle: 'Local profile and tokens',
-      workspaceSubtitle: 'Open it once you want to save work and spend tokens.',
-      stats: [
-        { value: '50+', label: 'AI personas per test' },
-        { value: '2', label: 'main next-step paths' },
-        { value: '~30s', label: 'to the first report' },
+      protocolKicker: 'Protocol — what happens to your idea',
+      protocolSteps: [
+        {
+          n: '01',
+          title: 'Brief',
+          desc: 'One sentence is enough. The AI builds a brief and asks questions specific to your business.',
+        },
+        {
+          n: '02',
+          title: 'Examination',
+          desc: 'A hundred personas with psychographics, roles, and budgets react. Fifteen percent are deliberately hostile — so flattery does not pass.',
+        },
+        {
+          n: '03',
+          title: 'Numbers',
+          desc: 'Score, opportunity (JTBD), and natural buyer groups are computed in code. The language model may not invent a single percentage.',
+        },
+        {
+          n: '04',
+          title: 'Verdict',
+          desc: 'Rejection reasons, real competition, price analysis, an interview kit for real conversations, and a turnaround plan.',
+        },
       ],
-      previewTitle: 'Sample report',
-      previewSubtitle: 'Quick look at the output after the first validation.',
-      pricingTitle: 'Tokens when you need them',
-      pricingSubtitle: 'No subscription. You spend only when you actually use AI.',
-      pricingPlans: [
-        { name: 'Starter bonus', price: '3,600', period: ' tokens', desc: 'Granted automatically when your local profile opens for the first time.', features: ['1 validation with 50 personas', 'Target audience suggestions', 'A few report tools', 'Around 10 quick advisor questions', 'No card and no subscription'], btn: 'Start free', active: false },
-        { name: 'Test top-up', price: '€10', period: ' = 10,000 tokens', desc: 'Simulated purchase for testing the billing UX.', features: ['Click and tokens are added instantly', 'No checkout or real charge', 'Tokens are spent per action', 'Balance stays in this browser', 'Ready for real payment later'], btn: 'Add €10 tokens', active: true },
-        { name: 'Pay as you go', price: '€0', period: ' monthly', desc: 'No monthly commitment. Pay only when you use AI.', features: ['Validation: 1,200 tokens', 'Report tools: 250-550 tokens', 'Advisor: 140 tokens', 'Deep advisor: 380 tokens', 'Memory and tasks: small extra cost'], btn: 'Open wallet', active: false },
+      verdictKicker: 'Sample verdict',
+      verdictNote: 'Output of a real test from development. We did not polish it — that is the point.',
+      verdictProduct: 'FitMeal — AI meal planner',
+      verdictMeta: 'B2C · €9.99/mo · 100 simulated buyers',
+      verdictStamp: 'Rejected',
+      verdictRows: [
+        { label: 'Buys', value: '8%' },
+        { label: 'Maybe', value: '40%' },
+        { label: 'Rejects', value: '52%' },
+        { label: 'Opportunity (JTBD)', value: '28 / 100' },
+        { label: 'Real competition', value: 'MyFitnessPal + manual planning' },
+        { label: 'Winnable group', value: 'Price-sensitive pragmatists — 52%' },
+        { label: 'First move', value: 'Free tier; show the price as a daily cost' },
       ],
-      testimonialsTitle: 'Early feedback',
-      testimonialsSubtitle: 'Short reactions from early users.',
-      testimonials: [
-        { quote: 'The AI highlighted 3 critical security concerns that investors literally asked us about during our pitch deck review a week later. Saved our round.', author: 'Steve M., FinTech Founder' },
-        { quote: 'Instead of spending weeks and thousands on validation surveys, I ran my SaaS concept in 30 seconds and saw exactly why HR buyers would reject it.', author: 'Ann K., SaaS Developer' },
+      tokensKicker: 'Pricing in tokens',
+      tokensSub: 'No subscription. You spend only when you actually use AI.',
+      tokensRows: [
+        { label: 'Starting balance', value: '3,600 tokens — free' },
+        { label: 'Validation (100 buyers)', value: '1,200' },
+        { label: 'Report tools (price, interviews, turnaround…)', value: '250–550' },
+        { label: 'Advisor question', value: '140' },
       ],
-      mockupHeader: 'Demo: SignalBoard (Founder SaaS)',
-      mockupScore: 'Idea Score: 68/100',
-      mockupStats: 'Would buy: 38% | Maybe: 34% | Rejects: 28%',
-      mockTabs: { summary: 'Summary', objections: 'Rejections', questions: 'Crowd Questions' },
-      mockSummary: 'SignalBoard looks promising for solo SaaS founders already doing interviews, but the signal is still soft. The biggest issue is not interest, it is proof that the tool saves time and is not just another ChatGPT wrapper.',
-      mockObjection: 'This sounds useful, but I do not see why I would not do this in Notion and ChatGPT.',
-      mockObjection2: 'I do not have enough real interviews yet for a dashboard like this to matter.',
-      mockQuestion: 'What exact result does a founder get after the first 5 customer interviews?',
-      mockQuestion2: 'What would convince me this shortens the path to first paid validation?',
-      mockAnswerPlaceholder: 'Type an answer or extra context...',
-      mockButton: 'Simulate answer',
-      continueReport: 'Return to latest report',
+      topupBtn: 'Add 10,000 test tokens',
+      topupNote: 'Billing simulation — no card, the balance stays in this browser.',
+      topupDone: 'Added. The balance lives in this browser.',
+      honestyKicker: 'Seal of honesty',
+      honestyBody:
+        'These are simulated buyers, not real people. The result is a guideline for early testing, not proof of a market. That is why every percentage is computed in code, why part of the personas deliberately roots against you, and why we will never tell you only what you want to hear.',
+      footerLine: 'AI Validator · protocol v2 · no fake reviews',
       errorTitle: 'Analysis failed',
       errorHelp: 'Nothing was lost. You can retry or edit the idea description.',
       retry: 'Try again',
       editIdea: 'Edit idea',
-    }
+      loadingText: 'Loading...',
+    },
   }[language];
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="paper-root min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <span className="w-8 h-8 border-4 border-zinc-800 border-t-indigo-600 rounded-full animate-spin" />
-          <span className="text-zinc-500 text-sm">{language === 'en' ? 'Loading...' : 'Učitavam...'}</span>
+          <span className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--hairline)] border-t-[var(--verdict-red)]" />
+          <span className="font-data text-xs uppercase tracking-[0.2em] text-[var(--ink-faint)]">{t.loadingText}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 relative">
+    <div className="paper-root min-h-screen">
       {loading && <LoadingScreen language={language} />}
 
-      {/* Background glow effects */}
-      <div className="absolute top-0 left-0 w-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -left-[20%] w-[80%] aspect-square rounded-full bg-indigo-600/10 blur-[130px] animate-float-slow" />
-        <div className="absolute -top-[5%] -right-[15%] w-[70%] aspect-square rounded-full bg-purple-500/10 blur-[120px] animate-float-reverse-slow" />
-      </div>
+      {/* ── Navigacija: wordmark + tekstualni linkovi ── */}
+      <nav className="border-b-2 border-[var(--ink)] px-4 sm:px-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 py-4">
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex items-baseline gap-3 text-left cursor-pointer"
+          >
+            <span className="font-display text-xl font-semibold tracking-tight text-[var(--ink)]">
+              AI Validator<span className="text-[var(--verdict-red)]">.</span>
+            </span>
+            <span className="kicker hidden sm:inline">{t.wordmarkSub}</span>
+          </button>
 
-      {/* Navbar */}
-      <nav className="border-b border-zinc-900 px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 relative z-10 bg-zinc-950/80 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-              <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fillOpacity="0.9" />
-            </svg>
-          </div>
-          <span className="font-semibold text-white tracking-wide text-lg font-title">AI Validator</span>
-        </div>
-
-        <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-end sm:gap-4">
-          <div className="flex bg-zinc-900/60 p-0.5 rounded-lg border border-zinc-800">
-            <button
-              onClick={() => setLanguage('hr')}
-              className={`px-2 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                language === 'hr' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              HR
+          <div className="flex items-center gap-5 text-sm">
+            <div className="font-data flex items-center gap-1 text-xs">
+              <button
+                onClick={() => setLanguage('hr')}
+                className={`cursor-pointer px-1 py-0.5 font-semibold uppercase tracking-wider transition-colors ${
+                  language === 'hr' ? 'text-[var(--verdict-red)] underline underline-offset-4' : 'text-[var(--ink-faint)] hover:text-[var(--ink)]'
+                }`}
+              >
+                HR
+              </button>
+              <span className="text-[var(--hairline-strong)]">/</span>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`cursor-pointer px-1 py-0.5 font-semibold uppercase tracking-wider transition-colors ${
+                  language === 'en' ? 'text-[var(--verdict-red)] underline underline-offset-4' : 'text-[var(--ink-faint)] hover:text-[var(--ink)]'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+            <button onClick={() => router.push('/projects')} className="link-ink text-sm">
+              {t.navProjects}
             </button>
-            <button
-              onClick={() => setLanguage('en')}
-              className={`px-2 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                language === 'en' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              EN
+            <button onClick={() => router.push('/plan')} className="link-ink text-sm">
+              {t.navPlan}
             </button>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-            <button
-              onClick={() => router.push('/projects')}
-              className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 transition-colors hover:bg-zinc-800 hover:text-white"
-            >
-              {t.myProjectsBtn}
+            <button onClick={() => router.push('/market')} className="link-ink text-sm">
+              {t.navMarket}
             </button>
-            <button
-              onClick={() => router.push('/settings')}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
-              title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
-            >
-              <Settings2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{language === 'en' ? 'Settings' : 'Postavke'}</span>
+            <button onClick={() => router.push('/settings')} className="link-ink text-sm">
+              {t.navSettings}
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <main className="relative z-10 flex flex-col items-center px-4 pb-12 pt-4 sm:pt-6">
-        <section id="start" className="flex min-h-[calc(100vh-4.5rem)] w-full max-w-6xl scroll-mt-24 items-center">
-          <div className="w-full">
-            <div className="mx-auto max-w-4xl text-center">
-              <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-indigo-800/50 bg-indigo-950/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-300" />
-                {language === 'en' ? 'AI first validation' : 'AI prva validacija'}
+      <main className="mx-auto max-w-6xl px-4 pb-20 sm:px-8">
+        {/* ── Hero: lijevo poravnat naslov + protokol počinje odmah ── */}
+        <section className="pt-12 sm:pt-16">
+          <p className="kicker">{t.heroKicker}</p>
+          <h1 className="mt-4 max-w-4xl text-4xl leading-[1.05] text-[var(--ink)] sm:text-6xl lg:text-[4.4rem]">
+            {t.heroTitle1}
+            <br />
+            <em className="text-[var(--verdict-red)] not-italic font-display italic">{t.heroTitle2}</em>
+          </h1>
+          <div className="mt-6 flex max-w-3xl flex-col gap-5 sm:flex-row sm:items-start sm:gap-8">
+            <p className="flex-1 text-base leading-relaxed text-[var(--ink-soft)]">{t.heroSub}</p>
+            <div className="shrink-0 border-l-2 border-[var(--verdict-red)] pl-3">
+              <p className="kicker !text-[var(--verdict-red)]">{t.realTest}</p>
+              <p className="font-data mt-1 text-xs font-medium text-[var(--ink-soft)]">{t.realTestLine}</p>
+            </div>
+          </div>
+
+          {hasStoredReport && (
+            <button type="button" onClick={() => router.push('/results')} className="link-ink mt-5 inline-block text-sm">
+              {t.continueReport}
+            </button>
+          )}
+
+          {/* ── Protokol počinje: unos ideje / odabir publika ── */}
+          <div className="sheet mt-8 p-4 sm:p-6">
+            {loadingAudiences ? (
+              <div className="flex flex-col items-center gap-3 py-16">
+                <span className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--hairline)] border-t-[var(--verdict-red)]" />
+                <span className="font-data text-xs uppercase tracking-[0.15em] text-[var(--ink-faint)]">{t.findingAudiences}</span>
               </div>
-              <h1 className="mt-5 text-[2.7rem] font-extrabold leading-[0.96] tracking-tight text-white sm:text-6xl md:text-7xl lg:text-[5.5rem]">
-                {t.title1}
-                <span className="bg-gradient-to-r from-indigo-400 via-indigo-200 to-purple-400 bg-clip-text text-transparent">{t.title2}</span>
-              </h1>
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-                {t.heroSubtitle}
-              </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
-                {t.heroProof.map((item) => (
-                  <span key={item} className="rounded-full border border-zinc-800/80 bg-zinc-900/70 px-3.5 py-1.5 text-[11px] font-semibold text-zinc-200 shadow-lg shadow-black/10">
-                    {item}
-                  </span>
+            ) : candidates ? (
+              <AudiencePicker
+                language={language}
+                segments={candidates}
+                onConfirm={handleConfirmAudiences}
+                onSkip={handleSkipAudiences}
+                onBack={handleBackToForm}
+              />
+            ) : (
+              <IdeaForm onIdeaReady={handleIdeaReady} onError={handleError} />
+            )}
+          </div>
+
+          {error && (
+            <div className="sheet mt-4 border-l-4 !border-l-[var(--verdict-red)] p-4">
+              <p className="font-data text-xs font-semibold uppercase tracking-[0.15em] text-[var(--verdict-red)]">{t.errorTitle}</p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--ink)]">{error}</p>
+              <p className="mt-1 text-xs text-[var(--ink-faint)]">{t.errorHelp}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {lastFailedForm && (
+                  <button type="button" onClick={() => runValidate(lastFailedForm)} className="btn-ink !py-2 !px-4 text-xs">
+                    {t.retry}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setCandidates(null);
+                  }}
+                  className="btn-line !py-2 !px-4 text-xs"
+                >
+                  {t.editIdea}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── Protokol koraci: numerirani redovi s hairline linijama ── */}
+        <section className="mt-20 sm:mt-28">
+          <div className="border-t-2 border-[var(--ink)] pt-3">
+            <p className="kicker">{t.protocolKicker}</p>
+          </div>
+          <div className="mt-6">
+            {t.protocolSteps.map((step) => (
+              <div
+                key={step.n}
+                className="grid grid-cols-[3rem_1fr] items-baseline gap-4 border-b border-[var(--hairline)] py-5 sm:grid-cols-[5rem_14rem_1fr] sm:gap-8"
+              >
+                <span className="font-data text-2xl font-medium text-[var(--verdict-red)] sm:text-3xl">{step.n}</span>
+                <h3 className="text-xl text-[var(--ink)] sm:text-2xl">{step.title}</h3>
+                <p className="col-span-2 text-sm leading-relaxed text-[var(--ink-soft)] sm:col-span-1 sm:text-base">
+                  {step.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Primjer verdikta: izvještajna tablica s pečatom ── */}
+        <section className="mt-20 sm:mt-28">
+          <div className="border-t-2 border-[var(--ink)] pt-3">
+            <p className="kicker">{t.verdictKicker}</p>
+          </div>
+          <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_18rem]">
+            <div className="sheet p-5 sm:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--hairline)] pb-4">
+                <div>
+                  <h3 className="text-2xl text-[var(--ink)]">{t.verdictProduct}</h3>
+                  <p className="font-data mt-1 text-xs text-[var(--ink-faint)]">{t.verdictMeta}</p>
+                </div>
+                <span className="stamp">{t.verdictStamp} · 52%</span>
+              </div>
+              <div className="mt-4 space-y-3.5">
+                {t.verdictRows.map((row) => (
+                  <div key={row.label} className="leader-row text-sm">
+                    <span className="text-[var(--ink-soft)]">{row.label}</span>
+                    <span className="leader-fill" />
+                    <span className="font-data max-w-[55%] text-right text-[13px] font-semibold text-[var(--ink)]">{row.value}</span>
+                  </div>
                 ))}
               </div>
             </div>
-
-            <div className="mx-auto mt-8 max-w-6xl rounded-[2rem] border border-zinc-800/80 bg-zinc-950/75 p-2 shadow-2xl shadow-black/40 backdrop-blur-xl sm:mt-10 sm:p-3">
-              <div className="rounded-[1.65rem] border border-white/5 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.12),_transparent_34%),linear-gradient(180deg,rgba(24,24,27,0.96),rgba(10,10,12,0.94))] p-3 sm:p-5">
-              <div className="mb-4 flex flex-col gap-3 border-b border-zinc-800/80 pb-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                    {language === 'en' ? 'Start with one sentence' : 'Kreni s jednom recenicom'}
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-300">
-                    {language === 'en'
-                      ? 'AI shapes the brief first, then opens the rest only when it helps.'
-                      : 'AI prvo slozi brief, pa otvara ostatak tek kad stvarno pomaze.'}
-                  </p>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-[11px] text-zinc-400 lg:min-w-[290px]">
-                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
-                    <div className="font-bold text-white">50</div>
-                    <div>persona</div>
-                  </div>
-                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
-                    <div className="font-bold text-white">~30s</div>
-                    <div>{language === 'en' ? 'signal' : 'signal'}</div>
-                  </div>
-                  <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 px-3 py-2">
-                    <div className="font-bold text-white">7d</div>
-                    <div>{language === 'en' ? 'test' : 'test'}</div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {hasStoredReport && (
-                  <button
-                    type="button"
-                    onClick={() => router.push('/results')}
-                    className="w-full rounded-2xl border border-emerald-800/50 bg-emerald-950/20 px-4 py-3 text-sm font-bold text-emerald-200 transition-colors hover:border-emerald-500 hover:text-white"
-                  >
-                    {t.continueReport}
-                  </button>
-                )}
-                {loadingAudiences ? (
-                  <div className="flex flex-col items-center gap-3 py-16">
-                    <span className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-800 border-t-indigo-600" />
-                    <span className="text-sm text-zinc-400">{t.findingAudiences}</span>
-                  </div>
-                ) : candidates ? (
-                  <AudiencePicker
-                    language={language}
-                    segments={candidates}
-                    onConfirm={handleConfirmAudiences}
-                    onSkip={handleSkipAudiences}
-                    onBack={handleBackToForm}
-                  />
-                ) : (
-                  <IdeaForm onIdeaReady={handleIdeaReady} onError={handleError} />
-                )}
-              </div>
-              </div>
-            </div>
+            <p className="max-w-[22rem] self-end border-l-2 border-[var(--annotate)] pl-3 text-sm italic leading-relaxed text-[var(--ink-soft)]">
+              {t.verdictNote}
+            </p>
           </div>
         </section>
 
-        {error && (
-          <div className="mt-4 rounded-2xl bg-red-950/30 border border-red-800/50 px-4 py-4 text-red-200 text-sm max-w-2xl w-full">
-            <p className="font-bold text-red-100">{t.errorTitle}</p>
-            <p className="mt-1 text-red-200/80">{error}</p>
-            <p className="mt-2 text-xs text-zinc-400">{t.errorHelp}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {lastFailedForm && (
-                <button
-                  type="button"
-                  onClick={() => runValidate(lastFailedForm)}
-                  className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-400"
-                >
-                  {t.retry}
-                </button>
-              )}
+        {/* ── Tokeni: cjenik kao tablica, jedan testni top-up ── */}
+        <section className="mt-20 sm:mt-28">
+          <div className="border-t-2 border-[var(--ink)] pt-3">
+            <p className="kicker">{t.tokensKicker}</p>
+          </div>
+          <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_18rem]">
+            <div>
+              <p className="text-sm text-[var(--ink-soft)]">{t.tokensSub}</p>
+              <div className="mt-5 space-y-3.5">
+                {t.tokensRows.map((row) => (
+                  <div key={row.label} className="leader-row text-sm">
+                    <span className="text-[var(--ink-soft)]">{row.label}</span>
+                    <span className="leader-fill" />
+                    <span className="font-data text-[13px] font-semibold text-[var(--ink)]">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="self-end">
               <button
                 type="button"
                 onClick={() => {
-                  setError('');
-                  setCandidates(null);
+                  addSimulatedPurchase(10);
+                  setTopupNotice(true);
                 }}
-                className="rounded-lg border border-red-800/60 px-3 py-1.5 text-xs font-bold text-red-100 hover:border-red-500"
+                className="btn-ink w-full text-sm"
               >
-                {t.editIdea}
+                {t.topupBtn}
               </button>
-            </div>
-          </div>
-        )}
-
-        <section className="mt-10 w-full max-w-4xl space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.workspaceTitle}</h2>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-500">{t.workspaceSubtitle}</p>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
-            <TokenWallet language={language} />
-            <SetupStatus language={language} onOpenSettings={() => router.push('/settings')} />
-          </div>
-        </section>
-
-        {/* Stats Counter Section */}
-        <section className="mt-20 w-full max-w-4xl rounded-2xl border border-zinc-900 bg-zinc-950/40 p-5 backdrop-blur-sm sm:p-8">
-          <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-300">{t.howItWorks}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{language === 'en' ? 'The shortest path from rough idea to the first real test.' : 'Najkraci put od sirove ideje do prvog stvarnog testa.'}</p>
-          </div>
-          <div className="mt-5 grid gap-6 text-center sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:gap-8 sm:divide-zinc-800/50">
-            {t.stats.map(({ value, label }) => (
-              <div key={label} className="border-b border-zinc-800/50 pb-5 last:border-b-0 last:pb-0 sm:border-b-0 sm:pb-0">
-                <div className="font-title text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{value}</div>
-                <div className="text-sm text-zinc-500 mt-1">{label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Interactive Live Preview Mockup Dashboard */}
-        <section className="mt-20 max-w-3xl w-full">
-          <div className="mb-6 text-left sm:text-center">
-            <h2 className="text-xl font-bold text-white tracking-wide">{t.previewTitle}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t.previewSubtitle}</p>
-          </div>
-          
-          <div className="relative w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 p-4 shadow-2xl backdrop-blur-md sm:p-6">
-            {/* Glossy top strip */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-zinc-800 pb-4 mb-4 gap-2">
-              <div>
-                <h4 className="font-bold text-white text-sm">{t.mockupHeader}</h4>
-                <p className="text-xs text-zinc-500">{t.mockupStats}</p>
-              </div>
-              <div className="text-xs text-green-500 bg-green-950/30 border border-green-800/40 rounded-full px-3 py-1 font-semibold">
-                {t.mockupScore}
-              </div>
-            </div>
-
-            {/* Mock Tabs */}
-            <div className="flex border-b border-zinc-800 gap-4 mb-4 text-xs font-semibold">
-              {(['summary', 'objections', 'questions'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setMockTab(tab)}
-                  className={`pb-2 border-b-2 transition-colors cursor-pointer ${
-                    mockTab === tab ? 'border-indigo-500 text-white' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                  }`}
-                >
-                  {t.mockTabs[tab]}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab content */}
-            <div className="min-h-[120px] text-xs text-zinc-300 leading-relaxed">
-              {mockTab === 'summary' && (
-                <p className="bg-zinc-950/40 border border-zinc-800 p-4 rounded-xl">{t.mockSummary}</p>
-              )}
-              {mockTab === 'objections' && (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <div className="flex justify-between font-semibold text-zinc-400">
-                      <span>{language === 'en' ? '1. No proof yet' : '1. Jos nema dokaza'}</span>
-                      <span>41%</span>
-                    </div>
-                    <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
-                      <div className="bg-red-500 h-full rounded-full" style={{ width: '41%' }} />
-                    </div>
-                  </div>
-                  <blockquote className="border border-red-950/30 bg-red-950/10 px-3 py-2 rounded-lg italic text-zinc-400">
-                    &ldquo;{t.mockObjection}&rdquo;
-                  </blockquote>
-                  <blockquote className="border border-red-950/30 bg-red-950/10 px-3 py-2 rounded-lg italic text-zinc-400">
-                    &ldquo;{t.mockObjection2}&rdquo;
-                  </blockquote>
-                </div>
-              )}
-              {mockTab === 'questions' && (
-                <div className="space-y-3.5">
-                  <div className="space-y-2">
-                    <p className="font-medium text-white">? {t.mockQuestion}</p>
-                    <input
-                      type="text"
-                      disabled
-                      placeholder={t.mockAnswerPlaceholder}
-                      className="w-full rounded bg-zinc-950/80 border border-zinc-800 px-3 py-1.5 text-zinc-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="font-medium text-white">? {t.mockQuestion2}</p>
-                    <input
-                      type="text"
-                      disabled
-                      placeholder={t.mockAnswerPlaceholder}
-                      className="w-full rounded bg-zinc-950/80 border border-zinc-800 px-3 py-1.5 text-zinc-500"
-                    />
-                  </div>
-                  <button className="w-full py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded font-semibold text-xs transition-colors cursor-pointer">
-                    {t.mockButton}
-                  </button>
-                </div>
-              )}
+              <p className="font-data mt-2 text-[11px] leading-relaxed text-[var(--ink-faint)]">
+                {topupNotice ? t.topupDone : t.topupNote}
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Pricing Plans Grid Section */}
-        <section className="mt-24 max-w-4xl w-full">
-          <div className="mb-8 text-left sm:mb-10 sm:text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">{t.pricingTitle}</h2>
-            <p className="mt-2 max-w-md text-sm text-zinc-500 sm:mx-auto">{t.pricingSubtitle}</p>
-          </div>
-          
-          <div className="grid gap-6 items-stretch md:grid-cols-3">
-            {t.pricingPlans.map((plan) => (
-              <div 
-                key={plan.name} 
-                className={`rounded-2xl border p-6 flex flex-col justify-between transition-all duration-300 relative ${
-                  plan.active 
-                    ? 'border-indigo-500 bg-indigo-950/10 shadow-lg shadow-indigo-500/5' 
-                    : 'border-zinc-800 bg-zinc-900/30'
-                }`}
-              >
-                {plan.active && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-indigo-600 text-white text-[10px] uppercase font-bold rounded-full tracking-wider">
-                    {language === 'en' ? 'Most Popular' : 'Najpopularnije'}
-                  </span>
-                )}
-                
-                <div>
-                  <h4 className="text-base font-bold text-white tracking-wide">{plan.name}</h4>
-                  <p className="text-xs text-zinc-500 mt-1 min-h-[32px]">{plan.desc}</p>
-                  
-                  <div className="my-5 flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold text-white tracking-tight">{plan.price}</span>
-                    <span className="text-xs text-zinc-500">{plan.period}</span>
-                  </div>
-                  
-                  <ul className="space-y-2 border-t border-zinc-800/80 pt-4 mb-6">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-xs text-zinc-300">
-                        <span className="text-indigo-400 text-[10px] mt-0.5">✔</span>
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <button 
-                  type="button"
-                  onClick={() => {
-                    if (plan.active) addSimulatedPurchase(10);
-                    document.getElementById('start')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }}
-                  className={`w-full py-2.5 rounded-lg font-semibold text-xs transition-colors cursor-pointer text-center ${
-                    plan.active 
-                      ? 'bg-indigo-600 hover:bg-indigo-500 text-white' 
-                      : 'border border-zinc-700 hover:border-zinc-500 text-zinc-300 hover:text-white'
-                  }`}
-                >
-                  {plan.btn}
-                </button>
-              </div>
-            ))}
+        {/* ── Pečat iskrenosti: disclaimer kao identitet, ne sitni tekst ── */}
+        <section className="mt-20 sm:mt-28">
+          <div className="border-2 border-[var(--ink)] p-5 sm:p-7">
+            <span className="stamp stamp--green">{t.honestyKicker}</span>
+            <p className="mt-4 max-w-3xl text-base leading-relaxed text-[var(--ink)]">{t.honestyBody}</p>
           </div>
         </section>
-
-        {/* Founder Testimonials */}
-        <section className="mt-24 max-w-3xl w-full">
-          <div className="mb-8 text-left sm:mb-10 sm:text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-white">{t.testimonialsTitle}</h2>
-            <p className="mt-2 text-sm text-zinc-500">{t.testimonialsSubtitle}</p>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            {t.testimonials.map(({ quote, author }) => (
-              <div key={author} className="rounded-xl border border-zinc-800 bg-zinc-900/10 p-6 flex flex-col justify-between backdrop-blur-sm relative">
-                <span className="absolute top-4 right-4 text-4xl text-zinc-800 font-serif leading-none pointer-events-none">&ldquo;</span>
-                <p className="text-sm text-zinc-300 leading-relaxed italic z-10">
-                  &ldquo;{quote}&rdquo;
-                </p>
-                <div className="text-xs font-semibold text-indigo-400 mt-4 border-t border-zinc-800/60 pt-3">
-                  — {author}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Social proof / How it works */}
-        <div className="mt-24 max-w-2xl w-full">
-          <div className="mb-8 text-left sm:text-center">
-            <p className="text-xs uppercase tracking-widest text-zinc-500">{t.howItWorks}</p>
-            <p className="mt-2 text-sm text-zinc-500">{language === 'en' ? 'A simple path from idea to action.' : 'Jednostavan put od ideje do konkretnog poteza.'}</p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {t.steps.map(({ title, desc }, index) => (
-              <div key={title} className="text-center space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-indigo-400 font-bold mx-auto shadow-inner">
-                  {index + 1}
-                </div>
-                <h3 className="font-semibold text-zinc-200 text-sm">{title}</h3>
-                <p className="text-xs text-zinc-500 leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="mt-16 text-xs text-zinc-600 text-center max-w-lg">
-          {t.disclaimer}
-        </p>
       </main>
+
+      <footer className="border-t border-[var(--hairline-strong)] px-4 py-6 sm:px-8">
+        <p className="font-data mx-auto max-w-6xl text-[11px] uppercase tracking-[0.18em] text-[var(--ink-faint)]">
+          {t.footerLine}
+        </p>
+      </footer>
     </div>
   );
 }

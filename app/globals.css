@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
@@ -9,6 +9,20 @@
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+
+  /* ── "Protokol" identitet (papir + tinta + pečat) ── */
+  --paper: #f6f3ec;
+  --paper-raised: #fffdf8;
+  --paper-dim: #efeadf;
+  --ink: #1b1712;
+  --ink-soft: #57503f;
+  --ink-faint: #8b8270;
+  --hairline: #d9d2c0;
+  --hairline-strong: #b9b09a;
+  --verdict-red: #c23217;
+  --verdict-red-dark: #a02a12;
+  --verdict-green: #1e6b44;
+  --annotate: #8a6d1f;
 }
 
 body {
@@ -45,6 +59,507 @@ textarea {
 h1, h2, h3, h4, .font-title {
   font-family: 'Outfit', sans-serif;
   letter-spacing: -0.02em;
+}
+
+/* ── "Protokol" površina (landing + unos) ─────────────────────────
+   Papir + tinta: marketing i unos ideje žive na papiru (protokol),
+   radni ekrani ostaju tamna instrument-ploča. Scope: .paper-root  */
+.paper-root {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Archivo', 'Inter', sans-serif;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(27, 23, 18, 0.012) 3px,
+    rgba(27, 23, 18, 0.012) 4px
+  );
+}
+
+.paper-root h1,
+.paper-root h2,
+.paper-root h3,
+.paper-root .font-display {
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: -0.01em;
+  font-weight: 550;
+}
+
+.paper-root ::selection {
+  background: var(--verdict-red);
+  color: var(--paper);
+}
+
+.font-data {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Mono kicker iznad sekcija: "01 — NAZIV" */
+.kicker {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Pečat: uokvireni, blago rotirani verdikt */
+.stamp {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--verdict-red);
+  border: 2px solid var(--verdict-red);
+  border-radius: 3px;
+  padding: 5px 12px;
+  transform: rotate(-2deg);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40'%3E%3Crect width='120' height='40' fill='white'/%3E%3C/svg%3E");
+}
+
+.stamp--green {
+  color: var(--verdict-green);
+  border-color: var(--verdict-green);
+}
+
+/* Dotted leader red u "izvještaj" tablicama: label ..... vrijednost */
+.leader-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.leader-row .leader-fill {
+  flex: 1;
+  border-bottom: 2px dotted var(--hairline-strong);
+  transform: translateY(-4px);
+  min-width: 24px;
+}
+
+/* Papirnata polja za unos */
+.paper-field {
+  width: 100%;
+  background: var(--paper-raised);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  padding: 12px 14px;
+  color: var(--ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.paper-field::placeholder {
+  color: var(--ink-faint);
+}
+.paper-field:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Glavni CTA: tinta na papiru, tvrd pomak sjene */
+.btn-ink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 700;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  padding: 12px 22px;
+  box-shadow: 3px 3px 0 rgba(27, 23, 18, 0.25);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+  cursor: pointer;
+}
+.btn-ink:hover:not(:disabled) {
+  background: var(--verdict-red);
+  border-color: var(--verdict-red);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 rgba(27, 23, 18, 0.25);
+}
+.btn-ink:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(27, 23, 18, 0.25);
+}
+.btn-ink:disabled {
+  background: var(--paper-dim);
+  color: var(--ink-faint);
+  border-color: var(--hairline-strong);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Sekundarni gumb: obrub, bez ispune */
+.btn-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 3px;
+  padding: 10px 16px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+  cursor: pointer;
+}
+.btn-line:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.btn-line:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Podcrtani tekst-link u navigaciji */
+.link-ink {
+  color: var(--ink-soft);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+.link-ink:hover {
+  color: var(--verdict-red);
+  border-bottom-color: var(--verdict-red);
+}
+
+/* Papirnata kartica/list */
+.sheet {
+  background: var(--paper-raised);
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  box-shadow: 0 1px 0 var(--hairline);
+}
+
+/* Results dashboard: završeni "Protokol" skin za stare tamne utility klase. */
+.paper-dashboard {
+  color: var(--ink);
+}
+
+.paper-dashboard section,
+.paper-dashboard nav,
+.paper-dashboard [class*="bg-zinc-"],
+.paper-dashboard [class*="bg-black/"],
+.paper-dashboard [class*="bg-white/"] {
+  background-color: var(--paper-raised) !important;
+}
+
+.paper-dashboard [class*="bg-indigo-"],
+.paper-dashboard [class*="bg-cyan-"],
+.paper-dashboard [class*="bg-violet-"] {
+  background-color: var(--paper-dim) !important;
+}
+
+.paper-dashboard [class*="bg-emerald-"],
+.paper-dashboard [class*="bg-green-"] {
+  background-color: rgba(30, 107, 68, 0.1) !important;
+}
+
+.paper-dashboard [class*="bg-amber-"],
+.paper-dashboard [class*="bg-yellow-"] {
+  background-color: rgba(138, 109, 31, 0.12) !important;
+}
+
+.paper-dashboard [class*="bg-red-"] {
+  background-color: rgba(194, 50, 23, 0.1) !important;
+}
+
+.paper-dashboard [class*="border-zinc-"],
+.paper-dashboard [class*="border-white/"],
+.paper-dashboard [class*="border-indigo-"],
+.paper-dashboard [class*="border-cyan-"],
+.paper-dashboard [class*="border-violet-"] {
+  border-color: var(--hairline-strong) !important;
+}
+
+.paper-dashboard [class*="border-emerald-"],
+.paper-dashboard [class*="border-green-"] {
+  border-color: rgba(30, 107, 68, 0.45) !important;
+}
+
+.paper-dashboard [class*="border-amber-"],
+.paper-dashboard [class*="border-yellow-"] {
+  border-color: rgba(138, 109, 31, 0.45) !important;
+}
+
+.paper-dashboard [class*="border-red-"] {
+  border-color: rgba(194, 50, 23, 0.45) !important;
+}
+
+.paper-dashboard [class*="text-zinc-"],
+.paper-dashboard [class*="text-slate-"] {
+  color: var(--ink-faint) !important;
+}
+
+.paper-dashboard [class*="text-white"],
+.paper-dashboard [class*="text-zinc-100"],
+.paper-dashboard [class*="text-zinc-200"],
+.paper-dashboard [class*="text-zinc-300"] {
+  color: var(--ink) !important;
+}
+
+.paper-dashboard [class*="text-indigo-"],
+.paper-dashboard [class*="text-cyan-"],
+.paper-dashboard [class*="text-violet-"] {
+  color: var(--annotate) !important;
+}
+
+.paper-dashboard [class*="text-emerald-"],
+.paper-dashboard [class*="text-green-"] {
+  color: var(--verdict-green) !important;
+}
+
+.paper-dashboard [class*="text-amber-"],
+.paper-dashboard [class*="text-yellow-"] {
+  color: var(--annotate) !important;
+}
+
+.paper-dashboard [class*="text-red-"] {
+  color: var(--verdict-red) !important;
+}
+
+.paper-dashboard .rounded-lg,
+.paper-dashboard .rounded-xl,
+.paper-dashboard .rounded-2xl,
+.paper-dashboard .rounded-\[1\.6rem\],
+.paper-dashboard .rounded-\[1\.75rem\] {
+  border-radius: 4px !important;
+}
+
+.paper-dashboard section {
+  box-shadow: 0 1px 0 var(--hairline) !important;
+}
+
+.paper-dashboard nav {
+  box-shadow: 0 1px 0 var(--hairline) !important;
+}
+
+.paper-dashboard button {
+  box-shadow: none !important;
+}
+
+.paper-dashboard button[class*="bg-indigo-"],
+.paper-dashboard button[class*="bg-cyan-"],
+.paper-dashboard button[class*="bg-zinc-"] {
+  background-color: transparent !important;
+  color: var(--ink-soft) !important;
+}
+
+.paper-dashboard button[class*="bg-indigo-600"],
+.paper-dashboard button[class*="border-indigo-500"] {
+  background-color: var(--ink) !important;
+  border-color: var(--ink) !important;
+  color: var(--paper) !important;
+}
+
+.paper-dashboard button:hover {
+  border-color: var(--ink) !important;
+  color: var(--ink) !important;
+}
+
+.paper-dashboard button[class*="bg-indigo-600"]:hover,
+.paper-dashboard button[class*="border-indigo-500"]:hover {
+  background-color: var(--verdict-red) !important;
+  border-color: var(--verdict-red) !important;
+  color: var(--paper) !important;
+}
+
+.paper-dashboard input,
+.paper-dashboard textarea,
+.paper-dashboard select {
+  background: var(--paper-raised) !important;
+  border-color: var(--hairline-strong) !important;
+  color: var(--ink) !important;
+  border-radius: 3px !important;
+}
+
+.paper-dashboard input::placeholder,
+.paper-dashboard textarea::placeholder {
+  color: var(--ink-faint) !important;
+}
+
+.paper-dashboard [class*="shadow-"],
+.paper-dashboard [class*="shadow_"] {
+  box-shadow: 0 1px 0 var(--hairline) !important;
+}
+
+.paper-dashboard [class*="bg-gradient"],
+.paper-dashboard [style*="linear-gradient"] {
+  background-image: none !important;
+}
+
+/* Advisors workspace: isti papirnati sustav preko postojećih chat/plan komponenti. */
+.paper-advisors {
+  color: var(--ink);
+}
+
+.paper-advisors nav,
+.paper-advisors aside,
+.paper-advisors section,
+.paper-advisors [class*="bg-zinc-"],
+.paper-advisors [class*="bg-black/"],
+.paper-advisors [class*="bg-white/"] {
+  background-color: var(--paper-raised) !important;
+}
+
+.paper-advisors [class*="bg-indigo-"],
+.paper-advisors [class*="bg-cyan-"],
+.paper-advisors [class*="bg-blue-"],
+.paper-advisors [class*="bg-violet-"] {
+  background-color: var(--paper-dim) !important;
+}
+
+.paper-advisors [class*="bg-emerald-"],
+.paper-advisors [class*="bg-green-"] {
+  background-color: rgba(30, 107, 68, 0.1) !important;
+}
+
+.paper-advisors [class*="bg-amber-"],
+.paper-advisors [class*="bg-yellow-"] {
+  background-color: rgba(138, 109, 31, 0.12) !important;
+}
+
+.paper-advisors [class*="bg-red-"] {
+  background-color: rgba(194, 50, 23, 0.1) !important;
+}
+
+.paper-advisors [class*="border-zinc-"],
+.paper-advisors [class*="border-indigo-"],
+.paper-advisors [class*="border-cyan-"],
+.paper-advisors [class*="border-blue-"],
+.paper-advisors [class*="border-violet-"],
+.paper-advisors [class*="border-white/"] {
+  border-color: var(--hairline-strong) !important;
+}
+
+.paper-advisors [class*="border-emerald-"],
+.paper-advisors [class*="border-green-"] {
+  border-color: rgba(30, 107, 68, 0.45) !important;
+}
+
+.paper-advisors [class*="border-amber-"],
+.paper-advisors [class*="border-yellow-"] {
+  border-color: rgba(138, 109, 31, 0.45) !important;
+}
+
+.paper-advisors [class*="border-red-"] {
+  border-color: rgba(194, 50, 23, 0.45) !important;
+}
+
+.paper-advisors [class*="text-zinc-"],
+.paper-advisors [class*="text-slate-"] {
+  color: var(--ink-faint) !important;
+}
+
+.paper-advisors [class*="text-white"],
+.paper-advisors [class*="text-zinc-100"],
+.paper-advisors [class*="text-zinc-200"],
+.paper-advisors [class*="text-zinc-300"] {
+  color: var(--ink) !important;
+}
+
+.paper-advisors [class*="text-indigo-"],
+.paper-advisors [class*="text-cyan-"],
+.paper-advisors [class*="text-blue-"],
+.paper-advisors [class*="text-violet-"] {
+  color: var(--annotate) !important;
+}
+
+.paper-advisors [class*="text-emerald-"],
+.paper-advisors [class*="text-green-"] {
+  color: var(--verdict-green) !important;
+}
+
+.paper-advisors [class*="text-amber-"],
+.paper-advisors [class*="text-yellow-"] {
+  color: var(--annotate) !important;
+}
+
+.paper-advisors [class*="text-red-"] {
+  color: var(--verdict-red) !important;
+}
+
+.paper-advisors .rounded-lg,
+.paper-advisors .rounded-xl,
+.paper-advisors .rounded-2xl,
+.paper-advisors .rounded-\[1\.4rem\],
+.paper-advisors .rounded-\[1\.6rem\],
+.paper-advisors .rounded-\[1\.8rem\] {
+  border-radius: 4px !important;
+}
+
+.paper-advisors [class*="shadow-"],
+.paper-advisors [class*="shadow_"] {
+  box-shadow: 0 1px 0 var(--hairline) !important;
+}
+
+.paper-advisors button[class*="bg-indigo-"],
+.paper-advisors button[class*="bg-cyan-"],
+.paper-advisors button[class*="bg-red-"] {
+  background-color: var(--ink) !important;
+  border-color: var(--ink) !important;
+  color: var(--paper) !important;
+}
+
+.paper-advisors button[class*="bg-red-"] {
+  background-color: var(--verdict-red) !important;
+  border-color: var(--verdict-red) !important;
+}
+
+.paper-advisors div[class*="bg-indigo-600"][class*="text-white"],
+.paper-advisors span[class*="bg-indigo-600"][class*="text-white"] {
+  background-color: var(--ink) !important;
+  color: var(--paper) !important;
+}
+
+.paper-advisors button:hover {
+  border-color: var(--ink) !important;
+}
+
+.paper-advisors textarea,
+.paper-advisors input,
+.paper-advisors select {
+  background: var(--paper-raised) !important;
+  border-color: var(--hairline-strong) !important;
+  color: var(--ink) !important;
+  border-radius: 3px !important;
+}
+
+.paper-advisors textarea::placeholder,
+.paper-advisors input::placeholder {
+  color: var(--ink-faint) !important;
+}
+
+.paper-advisors .boardroom-table {
+  background: linear-gradient(180deg, #b9b09a 0%, #8b8270 100%) !important;
+  border-color: var(--ink) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 0 rgba(27, 23, 18, 0.2) !important;
+}
+
+.paper-advisors [class*="ring-offset-zinc-"] {
+  --tw-ring-offset-color: var(--paper) !important;
+}
+
+.paper-advisors [class*="bg-gradient"] {
+  background-image: none !important;
+}
+
+.paper-advisors [class*="animate-spin"] {
+  border-color: var(--hairline-strong) !important;
+  border-top-color: var(--verdict-red) !important;
+}
+
+.paper-advisors button[aria-pressed] span,
+.paper-advisors button span[class*="bg-white"] {
+  background-color: var(--paper-raised) !important;
 }
 
 * {
@@ -101,6 +616,45 @@ html {
 
 .animate-float-reverse-slow {
   animation: floatReverse 22s infinite ease-in-out;
+}
+
+/* ── Boardroom (savjetnički stol) ── */
+@keyframes handRaise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) rotate(-10deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes handWave {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+}
+
+.boardroom-hand {
+  transform-origin: bottom center;
+  animation:
+    handRaise 0.25s ease-out,
+    handWave 1.5s ease-in-out 0.3s infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.boardroom-table {
+  background: linear-gradient(180deg, #3f3f46 0%, #27272a 30%, #18181b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 14px 28px rgba(0, 0, 0, 0.35);
 }
 
 .leaflet-container {

@@ -483,6 +483,93 @@ export interface ResearchReport {
   created_at: string;
 }
 
+/* ─────────────────────────────────────────────────────────────
+   ISTRAŽIVANJE TRŽIŠTA (konkurentska inteligencija)
+   ───────────────────────────────────────────────────────────── */
+
+/**
+ * Geografski doseg istraživanja — KRITIČNO za relevantnost: lokalni obrtnik
+ * (prozori oko Zagreba) ne smije dobiti konkurente s Novog Zelanda.
+ */
+export interface MarketScope {
+  scope: 'local' | 'national' | 'international';
+  /** Ljudski čitljiva regija, npr. "Zagreb i okolica, Hrvatska" ili "globalno" */
+  region: string;
+  /** 1 rečenica zašto je scope tako procijenjen */
+  rationale: string;
+}
+
+/**
+ * Profil jednog konkurenta. Tri razine prijetnje:
+ * direct = isti kupci + isti proizvod; indirect = isti problem, drugi pristup;
+ * substitute = potpuno uklanja potrebu za proizvodom.
+ */
+export interface CompetitorProfile {
+  name: string;
+  tier: 'direct' | 'indirect' | 'substitute';
+  url?: string;
+  /** Što rade (1-2 rečenice) */
+  summary: string;
+  /** Sličnosti s našim proizvodom */
+  overlap: string;
+  /** Ključne razlike */
+  differences: string;
+  /** Slabosti / pritužbe kupaca (prilika za nas) */
+  weaknesses: string[];
+  /** Kako mi možemo biti bolji — konkretno */
+  our_edge: string;
+  /** Cjenovni signal ako postoji u izvorima */
+  pricing?: string;
+  region?: string;
+  /** Prodajna kartica (samo za tier: 'direct') — kako odgovoriti kad kupac spomene baš ovog konkurenta */
+  battlecard?: {
+    /** Kako kupac formulira prigovor svojim riječima, npr. "Zašto ne bih samo koristio X?" */
+    objection: string;
+    /** Kratak, konkretan odgovor prodavača */
+    response: string;
+    /** Dokaz ili razlog-za-vjerovanje koji odgovor čini uvjerljivijim */
+    proof: string;
+  };
+}
+
+/**
+ * Tržišni signal po horizontu: tactical = trenutne akcije (cijene, featurei,
+ * kampanje); strategic = pozicioniranje/tehnologija; directional = rani signali
+ * budućih poteza (zapošljavanje, financiranje, M&A, patenti).
+ */
+export interface MarketSignal {
+  horizon: 'tactical' | 'strategic' | 'directional';
+  signal: string;
+  /** Što to znači za foundera */
+  implication: string;
+  source_url?: string;
+}
+
+/** Human-in-the-loop zadatak — ono do čega bot NEMA pristup (mystery shopping, win/loss razgovori...). */
+export interface MarketHumanTask {
+  title: string;
+  why: string;
+  how: string;
+}
+
+/**
+ * Strukturirani izvještaj konkurentske inteligencije. Brojke/imena STROGO iz
+ * web izvora (Tavily), sinteza LLM. Znanje o tržištu blijedi ~90 dana —
+ * created_at služi za upozorenje o svježini.
+ */
+export interface MarketIntelligence {
+  scope: MarketScope;
+  /** 2-4 rečenice: stanje tržišta u dosegu */
+  market_summary: string;
+  competitors: CompetitorProfile[];
+  /** Tržišne praznine / prilike (iz pritužbi i content gapova) */
+  gaps: string[];
+  signals: MarketSignal[];
+  human_tasks: MarketHumanTask[];
+  sources: ResearchSource[];
+  created_at: string;
+}
+
 /** Jedna poruka u chatu s agentom. */
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -541,6 +628,10 @@ export interface SavedProject {
   knowledge: ProjectKnowledge | null;
   /** Centralni panel chat — jedan grupni razgovor sa svim savjetnicima (govornik u msg.agentId) */
   panel: ChatMessage[];
+  /** Konkurentska inteligencija — istraživanje tržišta s geo dosegom (opcionalno, stariji zapisi je nemaju) */
+  market?: MarketIntelligence | null;
+  /** Prijašnji snimci istraživanja tržišta (najnoviji prvi, bez trenutnog), cap 5 — za "što se promijenilo" */
+  market_history?: MarketIntelligence[];
   /** Jednostavni task manager iz razgovora sa savjetnicima. */
   tasks: ProjectTask[];
   /** @deprecated stari 1-na-1 chatovi po agentu; zadržano za kompatibilnost starih dokumenata */
@@ -597,6 +688,8 @@ export interface IdeaFormData {
   website_url?: string;
   website_context?: string;
   document_context?: string;
+  /** Kompaktni sažetak istraživanja tržišta (lib/market-digest.ts) — personе ga koriste umjesto izmišljene konkurencije */
+  market_context?: string;
   geo_area?: GeoAreaSelection;
   geo_areas?: GeoAreaSelection[];
   b2b2c_consumer_description?: string;
@@ -610,6 +703,10 @@ export interface IdeaFormData {
   segmentSpecs?: SegmentSpec[];
   clarifications?: Array<{ question: string; answer: string }>;
   language?: 'hr' | 'en';
+  /** Eksplicitna velicina simuliranog uzorka za rerun testove. */
+  sample_size?: 50 | 100 | 200;
+  /** Kod B2B2C moze se testirati ukupno trziste ili samo jedna strana. */
+  validation_focus?: 'all' | 'users' | 'businesses';
   /** Dubina simulacije: 'standard' (~100 agenata, free) ili 'deep' (~300, paid). Default standard. */
   depth?: 'standard' | 'deep';
 }

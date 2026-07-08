@@ -16,6 +16,7 @@ const COMMAND_COSTS: Record<ServerActionCommand, number | ((payload: unknown) =>
   ai_idea_brief: 0,
   ai_intake: 0,
   ai_interview: 250,
+  ai_kb_translate: 80,
   ai_kb_update: 60,
   ai_obsidian_build: 250,
   ai_pricing: 250,

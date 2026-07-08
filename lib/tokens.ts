@@ -9,10 +9,23 @@ export type TokenAction =
   | 'advisor_deep'
   | 'advisor_task'
   | 'advisor_memory'
-  | 'advisor_setup';
+  | 'advisor_setup'
+  | 'discovery_question'
+  | 'market_scope'
+  | 'market_research';
 
 export const TOKEN_STORAGE_KEY = 'aivalidator_tokens_v1';
 export const TOKEN_STARTER_GRANT_KEY = 'aivalidator_tokens_starter_granted_v1';
+export const TOKEN_LOG_STORAGE_KEY = 'aivalidator_tokens_log_v1';
+const TOKEN_LOG_MAX_ENTRIES = 50;
+
+export interface TokenLogEntry {
+  ts: string;
+  type: 'spend' | 'topup' | 'starter';
+  label: string;
+  amount: number;
+  balance_after: number;
+}
 
 export const TOKENS_PER_EUR = 1000;
 export const STARTER_TOKENS = 3600;
@@ -27,6 +40,9 @@ export const TOKEN_COSTS: Record<TokenAction, number> = {
   advisor_task: 120,
   advisor_memory: 60,
   advisor_setup: 300,
+  discovery_question: 90,
+  market_scope: 50,
+  market_research: 750,
 };
 
 export function readTokenBalance(): number {
@@ -45,24 +61,53 @@ export function writeTokenBalance(nextBalance: number): number {
   return normalized;
 }
 
+/** Lokalna potrošačka evidencija — odgovor na "kako pratimo tko je potrošio koliko" bez pravog naloga. */
+export function readTokenLog(): TokenLogEntry[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(TOKEN_LOG_STORAGE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as TokenLogEntry[]) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function appendTokenLog(entry: TokenLogEntry): void {
+  if (typeof window === 'undefined') return;
+  const next = [entry, ...readTokenLog()].slice(0, TOKEN_LOG_MAX_ENTRIES);
+  window.localStorage.setItem(TOKEN_LOG_STORAGE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent('aivalidator:tokens'));
+}
+
 export function ensureStarterTokens(): number {
   if (typeof window === 'undefined') return STARTER_TOKENS;
   const alreadyGranted = window.localStorage.getItem(TOKEN_STARTER_GRANT_KEY) === '1';
   if (!alreadyGranted) {
     window.localStorage.setItem(TOKEN_STARTER_GRANT_KEY, '1');
-    return writeTokenBalance(readTokenBalance() + STARTER_TOKENS);
+    const balance = writeTokenBalance(readTokenBalance() + STARTER_TOKENS);
+    appendTokenLog({ ts: new Date().toISOString(), type: 'starter', label: 'Startni bonus', amount: STARTER_TOKENS, balance_after: balance });
+    return balance;
   }
   return readTokenBalance();
 }
 
-export function addSimulatedPurchase(euros: number): number {
-  return writeTokenBalance(readTokenBalance() + euros * TOKENS_PER_EUR);
+export function addSimulatedPurchase(euros: number, label = 'Test top-up'): number {
+  const amount = euros * TOKENS_PER_EUR;
+  const balance = writeTokenBalance(readTokenBalance() + amount);
+  appendTokenLog({ ts: new Date().toISOString(), type: 'topup', label, amount, balance_after: balance });
+  return balance;
 }
 
-export function spendTokens(cost: number): { ok: true; balance: number } | { ok: false; balance: number; missing: number } {
+export function spendTokens(
+  cost: number,
+  label = 'AI akcija'
+): { ok: true; balance: number } | { ok: false; balance: number; missing: number } {
   const balance = readTokenBalance();
   if (balance < cost) return { ok: false, balance, missing: cost - balance };
-  return { ok: true, balance: writeTokenBalance(balance - cost) };
+  const nextBalance = writeTokenBalance(balance - cost);
+  appendTokenLog({ ts: new Date().toISOString(), type: 'spend', label, amount: -cost, balance_after: nextBalance });
+  return { ok: true, balance: nextBalance };
 }
 
 export function formatTokens(tokens: number): string {

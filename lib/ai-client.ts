@@ -9,10 +9,13 @@ type ApiEndpoint =
   | 'chat'
   | 'conversion'
   | 'conjoint'
+  | 'discovery'
   | 'idea-brief'
   | 'intake'
   | 'interview'
+  | 'kb-translate'
   | 'kb-update'
+  | 'market'
   | 'obsidian-build'
   | 'pricing'
   | 'research'
@@ -28,10 +31,13 @@ type AiCommand =
   | 'ai_chat'
   | 'ai_conversion'
   | 'ai_conjoint'
+  | 'ai_discovery'
   | 'ai_idea_brief'
   | 'ai_intake'
   | 'ai_interview'
+  | 'ai_kb_translate'
   | 'ai_kb_update'
+  | 'ai_market'
   | 'ai_obsidian_build'
   | 'ai_pricing'
   | 'ai_research'
@@ -47,10 +53,13 @@ const endpointCommands: Record<ApiEndpoint, AiCommand> = {
   chat: 'ai_chat',
   conversion: 'ai_conversion',
   conjoint: 'ai_conjoint',
+  discovery: 'ai_discovery',
   'idea-brief': 'ai_idea_brief',
   intake: 'ai_intake',
   interview: 'ai_interview',
+  'kb-translate': 'ai_kb_translate',
   'kb-update': 'ai_kb_update',
+  market: 'ai_market',
   'obsidian-build': 'ai_obsidian_build',
   pricing: 'ai_pricing',
   research: 'ai_research',
@@ -150,6 +159,15 @@ export const aiClient = {
 
   updateKnowledge: <TResponse = unknown>(payload: unknown, fallbackError = 'Knowledge update failed') =>
     callAi<TResponse>('kb-update', payload, fallbackError),
+
+  translateKnowledge: <TResponse = unknown>(payload: unknown, fallbackError = 'Knowledge translation failed') =>
+    callAi<TResponse>('kb-translate', payload, fallbackError),
+
+  discoveryNext: <TResponse = unknown>(payload: unknown, fallbackError = 'Discovery question failed') =>
+    callAi<TResponse>('discovery', payload, fallbackError),
+
+  marketIntelligence: <TResponse = unknown>(payload: unknown, fallbackError = 'Market research failed') =>
+    callAi<TResponse>('market', payload, fallbackError),
 
   createTask: <TResponse = unknown>(payload: unknown, fallbackError = 'Task creation failed') =>
     callAi<TResponse>('tasks', payload, fallbackError),

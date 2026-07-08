@@ -8,6 +8,7 @@ import type {
   ProjectKnowledge,
   ChatMessage,
   ProjectTask,
+  MarketIntelligence,
 } from './types';
 import { getTauriInvoke } from './tauri';
 
@@ -26,6 +27,7 @@ type ProjectCommand =
   | 'project_update_knowledge'
   | 'project_update_panel'
   | 'project_update_tasks'
+  | 'project_update_market'
   | 'project_delete'
   | 'project_import'
   | 'project_restore_workspace'
@@ -57,6 +59,57 @@ function buildSummary(idea: IdeaFormData, report: ValidationReport | null): Save
     score: report?.score ?? null,
     personas_count: report?.meta.personas_count ?? null,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+type ImportableProject = Record<string, unknown> & { idea: IdeaFormData };
+
+function hasImportableIdea(value: unknown): value is ImportableProject {
+  return isRecord(value) && isRecord(value.idea);
+}
+
+function importedProjectCandidates(parsed: unknown): ImportableProject[] {
+  if (!isRecord(parsed)) return [];
+  if (hasImportableIdea(parsed.project)) return [parsed.project];
+  if (hasImportableIdea(parsed)) return [parsed];
+  if (Array.isArray(parsed.projects)) return parsed.projects.filter(hasImportableIdea);
+  if (Array.isArray(parsed)) return parsed.filter(hasImportableIdea);
+  return [];
+}
+
+function normalizeImportedProject(rawProject: ImportableProject): SavedProject {
+  const timestamp = nowIso();
+  const idea = rawProject.idea;
+  const report = (rawProject.report ?? null) as ValidationReport | null;
+  const summary = rawProject.summary && isRecord(rawProject.summary)
+    ? rawProject.summary as SavedProject['summary']
+    : buildSummary(idea, report);
+
+  return {
+    ...rawProject,
+    id: createId(),
+    owner_uid: LOCAL_OWNER_UID,
+    status: rawProject.status === 'draft' || rawProject.status === 'validated'
+      ? rawProject.status
+      : report
+      ? 'validated'
+      : 'draft',
+    idea,
+    report,
+    knowledge: rawProject.knowledge ?? null,
+    panel: Array.isArray(rawProject.panel) ? rawProject.panel as ChatMessage[] : [],
+    tasks: Array.isArray(rawProject.tasks) ? rawProject.tasks as ProjectTask[] : [],
+    chats: rawProject.chats && isRecord(rawProject.chats)
+      ? rawProject.chats as Partial<Record<string, ChatMessage[]>>
+      : {},
+    market: rawProject.market ?? null,
+    summary,
+    created_at: typeof rawProject.created_at === 'string' ? rawProject.created_at : timestamp,
+    updated_at: timestamp,
+  } as SavedProject;
 }
 
 function emitProjectChange(): void {
@@ -203,6 +256,7 @@ export async function createProject(
     report: input.report ?? null,
     knowledge: null,
     panel: [],
+    market: null,
     tasks: [],
     chats: {},
     summary: buildSummary(input.idea, input.report),
@@ -273,6 +327,25 @@ export async function updateProjectPanel(
   await patchProject(projectId, (project) => ({ ...project, panel: capped, updated_at: timestamp }));
 }
 
+const MARKET_HISTORY_CAP = 5;
+
+export async function updateProjectMarket(
+  projectId: string,
+  market: MarketIntelligence
+): Promise<void> {
+  const tauriResult = await invokeProject<void>('project_update_market', { projectId, market });
+  if (tauriResult.used) return;
+
+  const timestamp = nowIso();
+  await patchProject(projectId, (project) => {
+    // stari "trenutni" market prelazi u povijest prije nego ga novi zamijeni
+    const market_history = project.market
+      ? [project.market, ...(project.market_history ?? [])].slice(0, MARKET_HISTORY_CAP)
+      : (project.market_history ?? []);
+    return { ...project, market, market_history, updated_at: timestamp };
+  });
+}
+
 export async function updateProjectTasks(
   projectId: string,
   tasks: ProjectTask[]
@@ -314,20 +387,17 @@ export async function importProjectFromText(text: string): Promise<string> {
   if (tauriResult.used) return tauriResult.result;
 
   await ensureMigratedFromLocalStorage();
-  const parsed = JSON.parse(text);
-  const rawProject = parsed?.project ?? parsed;
-  if (!rawProject?.idea || !rawProject?.summary) throw new Error('Invalid AI Validator project file.');
+  const parsed = JSON.parse(text.trim().replace(/^\uFEFF/, ''));
+  const rawProjects = importedProjectCandidates(parsed);
+  if (!rawProjects.length) throw new Error('Invalid AI Validator project file.');
 
-  const timestamp = nowIso();
-  const project: SavedProject = {
-    ...rawProject,
-    id: createId(),
-    owner_uid: LOCAL_OWNER_UID,
-    created_at: rawProject.created_at ?? timestamp,
-    updated_at: timestamp,
-  };
-  await putProject(project);
-  return project.id;
+  let firstId = '';
+  for (const rawProject of rawProjects) {
+    const project = normalizeImportedProject(rawProject);
+    await putProject(project);
+    firstId ||= project.id;
+  }
+  return firstId;
 }
 
 export async function restoreWorkspaceFromText(text: string): Promise<number> {

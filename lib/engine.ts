@@ -11,11 +11,23 @@ export type RunDepth = 'standard' | 'deep';
 const PER_SEGMENT: Record<RunDepth, number> = { standard: 33, deep: 100 };
 /** Ciljani N za generičku (ne-segmentiranu) publiku po dubini. */
 const GENERIC_COUNT: Record<RunDepth, number> = { standard: 100, deep: 300 };
+const SAMPLE_SIZES = [50, 100, 200] as const;
 
 /** Viability score iz brojača odluka — JEDNO mjesto (anti-halucinacija, brojke iz koda). */
 function scoreFromCounts(buy: number, maybe: number, total: number): number {
   if (total === 0) return 0;
   return Math.min(100, Math.round((buy * 100 + maybe * 40) / total));
+}
+
+function sampleSizeFor(form: IdeaFormData, depth: RunDepth): number {
+  if (SAMPLE_SIZES.includes(form.sample_size as never)) return form.sample_size as number;
+  return GENERIC_COUNT[depth];
+}
+
+function matchesValidationFocus(persona: PersonaAttributes, form: IdeaFormData): boolean {
+  if (form.business_model !== 'B2B2C' || !form.validation_focus || form.validation_focus === 'all') return true;
+  if (form.validation_focus === 'users') return persona.market_side === 'user';
+  return persona.market_side === 'payer' || persona.market_side === 'partner' || persona.market_side === 'both';
 }
 
 interface SegmentStat {
@@ -212,6 +224,9 @@ ${geoAreasBlock}
 ${discoveryBlock ? `\nFOUNDER OFFICE HOURS CONTEXT:
 ${discoveryBlock}
 Use these answers as the founder's current assumptions. Do not blindly trust them: if an answer is vague, overbroad, or unsupported, personas should surface that as a trust, demand, or adoption risk.` : ''}
+${form.market_context ? `\nREAL MARKET RESEARCH (web-sourced, ground truth — not the founder's guess):
+${form.market_context}
+When a persona's current_alternative or objections would realistically point to one of these REAL competitors, name it specifically instead of a generic/invented alternative. Weigh known market gaps as opportunities the persona might not know exist yet.` : ''}
 
 Simulate reactions for these ${personas.length} personas. Be realistic. Since this is a ${form.business_model} product, evaluate their willingness to pay, objections, and buying intent from the perspective of ${form.business_model === 'B2B' ? 'a business buyer (ROI, budget, business efficiency)' : form.business_model === 'B2C' ? 'a consumer (personal budget, convenience, emotional appeal)' : 'a B2B2C player (both the business intermediary value and the end-consumer experience)'}.${b2b2cDirective}
 
@@ -395,6 +410,9 @@ ${form.assumed_customer ? `FOUNDER ASSUMED CUSTOMER: "${form.assumed_customer}"`
 ${discoveryBlock ? `\nFOUNDER OFFICE HOURS ANSWERS:
 ${discoveryBlock}
 Use these to judge whether the founder's assumed buyer, pain, status quo, wedge, proof, and risk match the simulated market response. If there is a mismatch, call it out in the summary and action plan.` : ''}
+${form.market_context ? `\nREAL MARKET RESEARCH (web-sourced, ground truth):
+${form.market_context}
+Ground the action plan and assumption_vs_reality in this real competitive landscape, not just the simulated reactions.` : ''}
 
 COMPUTED STATS (${count} simulated customers):
 Buy: ${buyPct}% | Maybe: ${maybePct}% | Reject: ${rejectPct}%
@@ -597,16 +615,28 @@ export async function runEngine(
     throw new Error(validation.reason || (form.language === 'en' ? 'Invalid idea description. Please provide more context.' : 'Opis ideje je prekratak ili nerazumljiv.'));
   }
 
+  const targetSampleSize = sampleSizeFor(form, depth);
+  const needsFocusedB2B2CSample = form.business_model === 'B2B2C' && form.validation_focus && form.validation_focus !== 'all';
+  const generationSampleSize = needsFocusedB2B2CSample ? targetSampleSize * 2 : targetSampleSize;
+  const segmentCount = Math.max(1, form.segmentSpecs?.length ?? 0);
+  const perSegment = form.sample_size
+    ? Math.max(1, Math.ceil(generationSampleSize / segmentCount))
+    : PER_SEGMENT[depth];
+
   let personas = existingPersonas && existingPersonas.length > 0
     ? existingPersonas
     : form.segmentSpecs && form.segmentSpecs.length > 0
-      ? generatePersonasForSegments(form.segmentSpecs, PER_SEGMENT[depth])
-      : generatePersonas(GENERIC_COUNT[depth], form.business_model, {
+      ? generatePersonasForSegments(form.segmentSpecs, perSegment)
+      : generatePersonas(generationSampleSize, form.business_model, {
           inferredCategory: form.inferred_category,
           pitch: form.elevator_pitch,
           description: `${form.detailed_description || ''} ${form.b2b2c_consumer_description || ''} ${form.b2b2c_business_description || ''}`,
           targetMarket: form.target_market,
         });
+
+  if (!existingPersonas?.length) {
+    personas = personas.filter((persona) => matchesValidationFocus(persona, form)).slice(0, targetSampleSize);
+  }
 
   const personaGeoAreas = form.geo_areas?.length ? form.geo_areas : form.geo_area ? [form.geo_area] : [];
   if (!existingPersonas?.length && personaGeoAreas.length > 0) {

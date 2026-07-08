@@ -13,13 +13,10 @@ import {
   eraseAllLocalProjects,
 } from '@/lib/projects';
 import type { SavedProject } from '@/lib/types';
-import { Settings2 } from 'lucide-react';
-import AccountModeNotice from '@/components/AccountModeNotice';
-import LocalProfileBadge from '@/components/LocalProfileBadge';
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { user, loading: authLoading, language } = useAuth();
+  const { user, loading: authLoading, language, setLanguage } = useAuth();
   const [projects, setProjects] = useState<SavedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,30 +28,30 @@ export default function ProjectsPage() {
   const t = {
     hr: {
       back: '← Natrag',
+      kicker: 'Protokol — arhiva projekata',
       title: 'Moji projekti',
-      subtitle: 'Tvoji spremljeni projekti i izvještaji.',
+      subtitle: 'Tvoji spremljeni projekti i izvještaji, na ovom uređaju.',
       empty: 'Još nemaš spremljenih projekata.',
       emptyHelp: 'Pokreni prvi test bez straha. Projekt možeš spremiti nakon izvještaja.',
-      emptyCta: 'Validiraj svoju prvu ideju',
+      emptyCta: 'Validiraj svoju prvu ideju →',
       continueLatest: 'Nastavi zadnji projekt',
       continueLatestHelp: 'Najbrzi povratak u zadnji spremljeni tok rada.',
       open: 'Otvori izvještaj',
       noReport: 'Nema izvještaja',
       advisors: 'Next-step',
-      advisorsHelp: 'Research i Positioning potezi nakon izvjestaja',
+      advisorsHelp: 'Research i Positioning potezi nakon izvještaja',
       delete: 'Obriši',
-      exportFile: 'Izvezi projekt',
+      exportFile: 'Izvezi',
       importFile: 'Uvezi projekt',
       backupWorkspace: 'Izvezi sigurnosnu kopiju',
-      restoreWorkspace: 'Vrati iz sigurnosne kopije',
+      restoreWorkspace: 'Vrati iz kopije',
       eraseAll: 'Obriši sve lokalno',
       eraseAllTitle: 'Obrisati sve lokalne projekte?',
       eraseAllHelp: 'Ovo briše sve projekte spremljene na ovom uređaju. Prije toga izvezi sigurnosnu kopiju ako želiš zadržati kopiju.',
       confirmEraseAll: 'Da, obriši sve',
-      localTitle: 'Lokalna pohrana',
-      localHelp: 'Podaci su spremljeni na ovom uređaju. Jedan projekt izvozi se kao .ai-project, a cijeli workspace kao .ai-workspace.',
-      localSaved: 'Lokalno spremljeno',
-      localSavedAt: (value: string) => `Zadnje spremanje: ${value}`,
+      localKicker: 'Lokalna pohrana',
+      localHelp: 'Podaci su spremljeni na ovom uređaju. Jedan projekt izvozi se kao .ai-project, cijeli workspace kao .ai-workspace.',
+      localSaved: 'Zadnje spremanje',
       localEmpty: 'Nema lokalno spremljenih projekata',
       importError: 'Ne mogu uvesti ovu datoteku.',
       restoreError: 'Ne mogu vratiti workspace iz ove datoteke.',
@@ -73,14 +70,16 @@ export default function ProjectsPage() {
       buyers: 'kupaca',
       draft: 'Skica',
       validated: 'Validirano',
+      willRemove: (n: number) => `${n} lokalnih zapisa projekta bit će uklonjeno s ovog uređaja.`,
     },
     en: {
       back: '← Back',
+      kicker: 'Protocol — project archive',
       title: 'My projects',
-      subtitle: 'Your saved projects and reports.',
+      subtitle: 'Your saved projects and reports, on this device.',
       empty: 'You have no saved projects yet.',
       emptyHelp: 'Run your first test without pressure. You can save a project after the report.',
-      emptyCta: 'Validate your first idea',
+      emptyCta: 'Validate your first idea →',
       continueLatest: 'Continue latest project',
       continueLatestHelp: 'The fastest way back into your latest saved flow.',
       open: 'Open report',
@@ -88,7 +87,7 @@ export default function ProjectsPage() {
       advisors: 'Next-step',
       advisorsHelp: 'Research and Positioning moves after the report',
       delete: 'Delete',
-      exportFile: 'Export project',
+      exportFile: 'Export',
       importFile: 'Import project',
       backupWorkspace: 'Export backup',
       restoreWorkspace: 'Restore backup',
@@ -96,10 +95,9 @@ export default function ProjectsPage() {
       eraseAllTitle: 'Erase all local projects?',
       eraseAllHelp: 'This deletes every project saved on this device. Export a backup first if you want to keep a copy.',
       confirmEraseAll: 'Yes, erase all',
-      localTitle: 'Local storage',
+      localKicker: 'Local storage',
       localHelp: 'Data is saved on this device. One project exports as .ai-project, the whole workspace as .ai-workspace.',
-      localSaved: 'Saved locally',
-      localSavedAt: (value: string) => `Last saved: ${value}`,
+      localSaved: 'Last saved',
       localEmpty: 'No local projects saved',
       importError: 'Could not import this file.',
       restoreError: 'Could not restore this workspace file.',
@@ -118,6 +116,7 @@ export default function ProjectsPage() {
       buyers: 'buyers',
       draft: 'Draft',
       validated: 'Validated',
+      willRemove: (n: number) => `${n} local project records will be removed from this device.`,
     },
   }[language];
 
@@ -271,40 +270,36 @@ export default function ProjectsPage() {
   };
 
   const scoreColor = (score: number | null) => {
-    if (score === null) return '#71717a';
-    return score >= 60 ? '#22c55e' : score >= 35 ? '#eab308' : '#ef4444';
+    if (score === null) return 'var(--ink-faint)';
+    return score >= 60 ? 'var(--verdict-green)' : score >= 35 ? 'var(--annotate)' : 'var(--verdict-red)';
   };
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-zinc-400">{t.loadingText}</div>
+      <div className="paper-root flex min-h-screen items-center justify-center">
+        <span className="font-data text-xs uppercase tracking-[0.2em] text-[var(--ink-faint)]">{t.loadingText}</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="paper-root min-h-screen">
+      {/* ── Modal: obriši projekt ── */}
       {pendingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl shadow-black/50">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-red-900/50 bg-red-950/30 text-red-300">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 7H18M10 11V17M14 11V17M9 7L10 4H14L15 7M8 7L9 20H15L16 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-white">{t.deleteTitle}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t.deleteHelp}</p>
-            <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3">
-              <p className="truncate text-sm font-semibold text-zinc-100">{pendingDelete.summary.product_name}</p>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">{pendingDelete.summary.elevator_pitch}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--ink)]/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md border-2 border-[var(--ink)] bg-[var(--paper-raised)] p-6">
+            <span className="stamp !text-[10px]">{t.deleteTitle}</span>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">{t.deleteHelp}</p>
+            <div className="mt-4 border-l-2 border-[var(--hairline-strong)] pl-3">
+              <p className="truncate text-sm font-semibold text-[var(--ink)]">{pendingDelete.summary.product_name}</p>
+              <p className="mt-1 text-xs leading-relaxed text-[var(--ink-faint)]">{pendingDelete.summary.elevator_pitch}</p>
             </div>
             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setPendingDelete(null)}
                 disabled={deletingId === pendingDelete.id}
-                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-line text-sm disabled:opacity-50"
               >
                 {t.cancel}
               </button>
@@ -312,7 +307,7 @@ export default function ProjectsPage() {
                 type="button"
                 onClick={() => handleDelete(pendingDelete.id)}
                 disabled={deletingId === pendingDelete.id}
-                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-ink !border-[var(--verdict-red)] !bg-[var(--verdict-red)] text-sm"
               >
                 {deletingId === pendingDelete.id ? t.deleting : t.confirmDelete}
               </button>
@@ -321,31 +316,23 @@ export default function ProjectsPage() {
         </div>
       )}
 
+      {/* ── Modal: obriši sve ── */}
       {pendingEraseAll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-red-900/60 bg-zinc-900 p-6 shadow-2xl shadow-black/50">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-red-900/50 bg-red-950/30 text-red-300">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 9V13M12 17H12.01M10.3 4.4L2.7 18A2 2 0 0 0 4.45 21H19.55A2 2 0 0 0 21.3 18L13.7 4.4A2 2 0 0 0 10.3 4.4Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-white">{t.eraseAllTitle}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t.eraseAllHelp}</p>
-            <div className="mt-4 rounded-2xl border border-red-900/40 bg-red-950/20 p-3 text-xs leading-relaxed text-red-100/80">
-              {projects.length} {language === 'en' ? 'local project records will be removed from this device.' : 'lokalnih zapisa projekta bit će uklonjeno s ovog uređaja.'}
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--ink)]/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md border-2 border-[var(--verdict-red)] bg-[var(--paper-raised)] p-6">
+            <span className="stamp !text-[10px]">{t.eraseAllTitle}</span>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">{t.eraseAllHelp}</p>
+            <p className="font-data mt-3 text-xs leading-relaxed text-[var(--verdict-red)]">
+              {t.willRemove(projects.length)}
+            </p>
             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setPendingEraseAll(false)}
-                className="rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
-              >
+              <button type="button" onClick={() => setPendingEraseAll(false)} className="btn-line text-sm">
                 {t.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleEraseAll}
-                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+                className="btn-ink !border-[var(--verdict-red)] !bg-[var(--verdict-red)] text-sm"
               >
                 {t.confirmEraseAll}
               </button>
@@ -354,67 +341,60 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {/* Navbar */}
-      <nav className="sticky top-0 z-10 flex flex-col gap-3 border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            onClick={() => router.push('/')}
-            className="text-zinc-400 hover:text-white transition-colors text-sm flex items-center gap-1.5 cursor-pointer"
-          >
+      {/* ── Masthead ── */}
+      <nav className="border-b-2 border-[var(--ink)] px-4 sm:px-8">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 py-4">
+          <button type="button" onClick={() => router.push('/')} className="link-ink text-sm">
             {t.back}
           </button>
-          <span className="text-zinc-700">|</span>
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 shadow-lg shadow-indigo-950/30">
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fillOpacity="0.9" />
-              </svg>
+          <div className="flex items-center gap-5">
+            <div className="font-data flex items-center gap-1 text-xs">
+              <button
+                onClick={() => setLanguage('hr')}
+                className={`cursor-pointer px-1 py-0.5 font-semibold uppercase tracking-wider transition-colors ${
+                  language === 'hr' ? 'text-[var(--verdict-red)] underline underline-offset-4' : 'text-[var(--ink-faint)] hover:text-[var(--ink)]'
+                }`}
+              >
+                HR
+              </button>
+              <span className="text-[var(--hairline-strong)]">/</span>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`cursor-pointer px-1 py-0.5 font-semibold uppercase tracking-wider transition-colors ${
+                  language === 'en' ? 'text-[var(--verdict-red)] underline underline-offset-4' : 'text-[var(--ink-faint)] hover:text-[var(--ink)]'
+                }`}
+              >
+                EN
+              </button>
             </div>
-            <span className="truncate font-semibold text-sm text-white">{t.title}</span>
+            <button type="button" onClick={() => router.push('/settings')} className="link-ink text-sm">
+              {language === 'en' ? 'Settings' : 'Postavke'}
+            </button>
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="sm:hidden">
-            <LocalProfileBadge language={language} />
-          </div>
-          <div className="hidden sm:block">
-            <LocalProfileBadge language={language} />
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push('/settings')}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
-            title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            {language === 'en' ? 'Settings' : 'Postavke'}
-          </button>
         </div>
       </nav>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:py-8">
-        <div className="mb-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <main className="mx-auto max-w-4xl px-4 pb-20 sm:px-8">
+        {/* ── Naslov ── */}
+        <section className="pt-10 sm:pt-14">
+          <p className="kicker">{t.kicker}</p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-800/40 bg-indigo-950/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-300" />
-                {language === 'en' ? 'Project workspace' : 'Projektni workspace'}
-              </div>
-              <h1 className="mt-3 text-2xl font-bold text-white">{t.title}</h1>
-              <p className="text-zinc-400 text-sm">{t.subtitle}</p>
+              <h1 className="text-4xl text-[var(--ink)] sm:text-5xl">{t.title}</h1>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--ink-soft)]">{t.subtitle}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {latestProject && (
                 <button
                   type="button"
                   onClick={() => (latestProject.report ? handleOpen(latestProject) : handleOpenAdvisors(latestProject))}
-                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-indigo-500"
                   title={t.continueLatestHelp}
+                  className="btn-ink text-sm"
                 >
                   {t.continueLatest}
                 </button>
               )}
-              <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-cyan-800/60 bg-cyan-950/20 px-4 py-2 text-sm font-bold text-cyan-100 transition-colors hover:border-cyan-500 hover:text-white">
+              <label className="btn-line cursor-pointer text-sm">
                 {t.importFile}
                 <input
                   type="file"
@@ -428,177 +408,154 @@ export default function ProjectsPage() {
               </label>
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* ── Lokalna pohrana ── */}
+        <section className="mt-8">
+          <div className="sheet p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="kicker !text-[var(--ink-soft)]">{t.localKicker}</p>
+              <span className="font-data text-[11px] text-[var(--ink-faint)]">
+                {lastSavedAt ? `${t.localSaved}: ${lastSavedAt}` : t.localEmpty}
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-[var(--ink-faint)]">{t.localHelp}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button type="button" onClick={handleWorkspaceBackup} className="btn-line text-xs">
+                {t.backupWorkspace}
+              </button>
+              <label className="btn-line cursor-pointer text-xs">
+                {t.restoreWorkspace}
+                <input
+                  type="file"
+                  accept=".ai-workspace,application/json"
+                  className="hidden"
+                  onChange={(event) => {
+                    void handleWorkspaceRestore(event.target.files?.[0] ?? null);
+                    event.currentTarget.value = '';
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setPendingEraseAll(true)}
+                className="btn-line !border-[var(--verdict-red)] !text-[var(--verdict-red)] text-xs"
+              >
+                {t.eraseAll}
+              </button>
+            </div>
+          </div>
+        </section>
 
         {loading && (
           <div className="flex items-center justify-center py-20">
-            <span className="w-8 h-8 border-4 border-zinc-800 border-t-indigo-600 rounded-full animate-spin" />
+            <span className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--hairline)] border-t-[var(--verdict-red)]" />
           </div>
         )}
 
         {error && !loading && (
-          <div className="rounded-lg bg-red-950/40 border border-red-800/50 px-4 py-3 text-red-300 text-sm">
+          <div className="mt-6 border-l-4 border-[var(--verdict-red)] bg-[var(--paper-raised)] px-4 py-3 text-sm text-[var(--ink)]">
             {error}
           </div>
         )}
 
         {notice && !loading && (
-          <div className="mb-4 rounded-lg bg-emerald-950/30 border border-emerald-800/50 px-4 py-3 text-emerald-200 text-sm">
+          <div className="mt-6 border-l-4 border-[var(--verdict-green)] bg-[var(--paper-raised)] px-4 py-3 text-sm text-[var(--ink)]">
             {notice}
           </div>
         )}
 
-        {!loading && (
-          <section className="mb-6 rounded-[1.6rem] border border-cyan-900/40 bg-cyan-950/10 p-4 shadow-[0_18px_40px_rgba(0,0,0,0.12)]">
-            <div className="flex flex-col gap-4">
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),18rem] lg:items-start">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-bold text-cyan-50">{t.localTitle}</h2>
-                    <span className="rounded-full border border-emerald-800/50 bg-emerald-950/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-200">
-                      {lastSavedAt ? t.localSaved : t.localEmpty}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed text-cyan-100/65">{t.localHelp}</p>
-                  <p className="mt-2 text-xs font-medium text-zinc-400">
-                    {lastSavedAt ? t.localSavedAt(lastSavedAt) : t.localEmpty}
-                  </p>
-                </div>
-                <AccountModeNotice language={language} compact />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleWorkspaceBackup}
-                    className="rounded-xl border border-cyan-700/60 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-100 transition-colors hover:border-cyan-400 hover:text-white"
-                  >
-                    {t.backupWorkspace}
-                  </button>
-                  <label className="inline-flex cursor-pointer items-center justify-center rounded-xl border border-zinc-700 px-3 py-2 text-xs font-bold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white">
-                    {t.restoreWorkspace}
-                    <input
-                      type="file"
-                      accept=".ai-workspace,application/json"
-                      className="hidden"
-                      onChange={(event) => {
-                        void handleWorkspaceRestore(event.target.files?.[0] ?? null);
-                        event.currentTarget.value = '';
-                      }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setPendingEraseAll(true)}
-                    className="rounded-xl border border-red-900/60 px-3 py-2 text-xs font-bold text-red-300 transition-colors hover:border-red-500 hover:text-red-100"
-                  >
-                    {t.eraseAll}
-                  </button>
-                </div>
-              </div>
-            </div>
+        {/* ── Prazno stanje ── */}
+        {!loading && !error && projects.length === 0 && (
+          <section className="mt-10 border-2 border-dashed border-[var(--hairline-strong)] py-16 text-center">
+            <p className="font-semibold text-[var(--ink)]">{t.empty}</p>
+            <p className="mt-1 text-sm text-[var(--ink-faint)]">{t.emptyHelp}</p>
+            <button type="button" onClick={() => router.push('/')} className="btn-ink mt-5 text-sm">
+              {t.emptyCta}
+            </button>
           </section>
         )}
 
-        {!loading && !error && projects.length === 0 && (
-          <div className="text-center py-20 space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-900/50 bg-indigo-950/30 text-2xl">
-              ✦
-            </div>
-            <div>
-              <p className="font-semibold text-white">{t.empty}</p>
-              <p className="mt-1 text-sm text-zinc-500">{t.emptyHelp}</p>
-            </div>
-            <button
-              onClick={() => router.push('/')}
-              className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-5 py-2.5 text-sm font-medium transition-colors cursor-pointer"
-            >
-              {t.emptyCta}
-            </button>
-          </div>
-        )}
-
+        {/* ── Popis projekata: dosjei ── */}
         {!loading && !error && projects.length > 0 && (
-          <div className="grid max-w-full gap-4 overflow-hidden">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="grid max-w-full grid-cols-1 gap-4 overflow-hidden rounded-[1.5rem] border border-zinc-800 bg-zinc-900/90 p-4 shadow-[0_16px_40px_rgba(0,0,0,0.12)] transition-colors hover:border-zinc-700 sm:grid-cols-[auto,minmax(0,1fr)] sm:items-center lg:grid-cols-[auto,minmax(0,1fr),11rem]"
-              >
-                {/* Score badge */}
-                <div
-                  className="flex h-14 w-14 flex-shrink-0 flex-col items-center justify-center rounded-2xl border"
-                  style={{
-                    borderColor: scoreColor(project.summary.score) + '55',
-                    background: scoreColor(project.summary.score) + '15',
-                  }}
-                >
-                  <span className="text-lg font-bold" style={{ color: scoreColor(project.summary.score) }}>
-                    {project.summary.score ?? '—'}
-                  </span>
-                  <span className="text-[9px] text-zinc-500 uppercase">score</span>
-                </div>
-
-                {/* Info */}
-                <div className="min-w-0 max-w-full overflow-hidden">
-                  <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2">
-                    <h3 className="min-w-0 max-w-full break-words font-semibold text-white">{project.summary.product_name}</h3>
-                    <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
-                      {project.summary.business_model}
+          <section className="mt-10">
+            <div className="border-t-2 border-[var(--ink)]" />
+            <div className="divide-y divide-[var(--hairline)]">
+              {projects.map((project, index) => (
+                <div key={project.id} className="grid gap-4 py-6 sm:grid-cols-[3.5rem_1fr_auto] sm:items-start">
+                  {/* Broj dosjea + score */}
+                  <div className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-1">
+                    <span className="font-data text-xs text-[var(--ink-faint)]">
+                      {String(index + 1).padStart(2, '0')}
                     </span>
-                    <span
-                      className={`flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded border ${
-                        project.status === 'validated'
-                          ? 'bg-green-950/40 text-green-400 border-green-800/40'
-                          : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-                      }`}
+                    <div
+                      className="font-data flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border-2 text-base font-semibold"
+                      style={{ borderColor: scoreColor(project.summary.score), color: scoreColor(project.summary.score) }}
                     >
-                      {project.status === 'validated' ? t.validated : t.draft}
-                    </span>
+                      {project.summary.score ?? '—'}
+                    </div>
                   </div>
-                  <p className="max-w-full break-words text-sm leading-relaxed text-zinc-400">{project.summary.elevator_pitch}</p>
-                  <p className="text-xs text-zinc-600 mt-1">
-                    {new Date(project.created_at).toLocaleString(language === 'en' ? 'en-US' : 'hr-HR')}
-                    {project.summary.personas_count != null && (
-                      <> · {project.summary.personas_count} {t.buyers}</>
-                    )}
-                  </p>
-                </div>
 
-                {/* Actions */}
-                <div className="grid w-full grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1 lg:flex lg:w-44 lg:flex-col">
-                  <button
-                    onClick={() => handleOpen(project)}
-                    disabled={!project.report}
-                    className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 lg:w-full"
-                  >
-                    {project.report ? t.open : t.noReport}
-                  </button>
-                  <button
-                    onClick={() => handleOpenAdvisors(project)}
-                    className="rounded-xl border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-200 transition-colors hover:border-violet-600 cursor-pointer lg:w-full"
-                    title={t.advisorsHelp}
-                  >
-                    ✨ {t.advisors}
-                  </button>
-                  <button
-                    onClick={() => handleExport(project)}
-                    className="rounded-xl border border-zinc-800 px-3 py-2 text-[11px] text-cyan-500 transition-colors hover:text-cyan-300 cursor-pointer lg:w-full lg:border-transparent lg:py-1"
-                  >
-                    {t.exportFile}
-                  </button>
-                  <button
-                    onClick={() => setPendingDelete(project)}
-                    disabled={deletingId === project.id}
-                    className="rounded-xl border border-zinc-800 px-3 py-2 text-[11px] text-zinc-500 transition-colors hover:text-red-400 cursor-pointer lg:w-full lg:border-transparent lg:py-1"
-                  >
-                    {deletingId === project.id ? t.deleting : t.delete}
-                  </button>
+                  {/* Info */}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{project.summary.product_name}</h3>
+                      <span className="font-data rounded-full border border-[var(--hairline-strong)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[var(--ink-soft)]">
+                        {project.summary.business_model}
+                      </span>
+                      <span
+                        className={`font-data rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+                          project.status === 'validated'
+                            ? 'border-[var(--verdict-green)] text-[var(--verdict-green)]'
+                            : 'border-[var(--hairline-strong)] text-[var(--ink-faint)]'
+                        }`}
+                      >
+                        {project.status === 'validated' ? t.validated : t.draft}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm leading-relaxed text-[var(--ink-soft)]">{project.summary.elevator_pitch}</p>
+                    <p className="font-data mt-2 text-[11px] text-[var(--ink-faint)]">
+                      {new Date(project.created_at).toLocaleString(language === 'en' ? 'en-US' : 'hr-HR')}
+                      {project.summary.personas_count != null && <> · {project.summary.personas_count} {t.buyers}</>}
+                    </p>
+                  </div>
+
+                  {/* Akcije */}
+                  <div className="flex flex-wrap items-start gap-2 sm:w-40 sm:flex-col sm:items-stretch">
+                    <button
+                      onClick={() => handleOpen(project)}
+                      disabled={!project.report}
+                      className="btn-ink flex-1 text-xs disabled:opacity-40 sm:flex-none"
+                    >
+                      {project.report ? t.open : t.noReport}
+                    </button>
+                    <button
+                      onClick={() => handleOpenAdvisors(project)}
+                      title={t.advisorsHelp}
+                      className="btn-line flex-1 text-xs sm:flex-none"
+                    >
+                      {t.advisors}
+                    </button>
+                    <div className="flex gap-3 pt-1">
+                      <button
+                        onClick={() => handleExport(project)}
+                        className="link-ink text-[11px] !text-[var(--ink-faint)] hover:!text-[var(--ink)]"
+                      >
+                        {t.exportFile}
+                      </button>
+                      <button
+                        onClick={() => setPendingDelete(project)}
+                        disabled={deletingId === project.id}
+                        className="link-ink text-[11px] !text-[var(--ink-faint)] hover:!text-[var(--verdict-red)]"
+                      >
+                        {deletingId === project.id ? t.deleting : t.delete}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </section>
         )}
       </main>
     </div>

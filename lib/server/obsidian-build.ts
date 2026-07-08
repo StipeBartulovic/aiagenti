@@ -2,6 +2,7 @@ import { callDeepSeek } from '@/lib/deepseek';
 import { buildVaultNotes, safeName } from '@/lib/obsidian-notes';
 import type {
   IdeaFormData,
+  MarketIntelligence,
   ObsidianNote,
   ProjectKnowledge,
   ValidationReport,
@@ -12,6 +13,7 @@ export interface ObsidianBuildRequest {
   idea: IdeaFormData;
   report: ValidationReport;
   knowledge?: ProjectKnowledge | null;
+  market?: MarketIntelligence | null;
   language: 'hr' | 'en';
 }
 
@@ -30,7 +32,8 @@ export async function buildObsidianVault(body: ObsidianBuildRequest): Promise<Ob
     body.idea,
     body.report,
     body.knowledge ?? null,
-    body.language
+    body.language,
+    body.market ?? null
   );
 
   const project = safeName(body.report.meta.product_name || body.idea.product_name);

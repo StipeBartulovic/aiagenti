@@ -30,6 +30,34 @@ const asStrArray = (v: unknown, fallback: string[]): string[] => {
   return out.length ? out : fallback;
 };
 
+function preferredRegions(idea: IdeaFormData): string[] {
+  const geoAreas = idea.geo_areas?.length ? idea.geo_areas : idea.geo_area ? [idea.geo_area] : [];
+  const geoLabels = geoAreas.map((area) => area.label).filter(Boolean);
+  if (geoLabels.length) return geoLabels.slice(0, 3);
+
+  const target = (idea.target_market || '').trim();
+  if (!target) return [];
+  if (/\b(dalmacij|dalmatia|split|zadar|sibenik|šibenik|dubrovnik|makarska|trogir)\b/i.test(target)) {
+    return ['Dalmacija, Hrvatska'];
+  }
+  if (/\b(istra|istria|pula|rovinj|porec|poreč|umag)\b/i.test(target)) {
+    return ['Istra, Hrvatska'];
+  }
+  if (/\b(kvarner|rijeka|opatija|krk|cres|losinj|lošinj)\b/i.test(target)) {
+    return ['Kvarner, Hrvatska'];
+  }
+  if (/\b(slavonij|osijek|vukovar|vinkovci|požega|pozega)\b/i.test(target)) {
+    return ['Slavonija, Hrvatska'];
+  }
+  if (/\b(zagreb|zagrebačk|zagreback)\b/i.test(target)) {
+    return ['Zagreb i okolica, Hrvatska'];
+  }
+  if (target.length <= 80 && !/\b(global|globalno|international|worldwide|svijet)\b/i.test(target)) {
+    return [target];
+  }
+  return [];
+}
+
 function formatDiscoveryAnswers(idea: IdeaFormData): string {
   const answers = (idea.discovery_answers ?? []).filter((item) => item.answer.trim().length > 0);
   const adaptive = (idea.adaptive_answers ?? []).filter((item) => item.answer.trim().length > 0);
@@ -45,7 +73,7 @@ function formatDiscoveryAnswers(idea: IdeaFormData): string {
   return [discovery, adaptiveBlock].filter(Boolean).join('\n');
 }
 
-function sanitize(raw: RawSegment, index: number): SegmentSpec | null {
+function sanitize(raw: RawSegment, index: number, regionFallback: string[] = []): SegmentSpec | null {
   if (!raw || typeof raw.label !== 'string' || !raw.label.trim()) return null;
 
   const ageLo = clampInt(raw.age_range?.[0], 16, 80, 25);
@@ -64,7 +92,7 @@ function sanitize(raw: RawSegment, index: number): SegmentSpec | null {
     description: (raw.description || '').trim().slice(0, 200),
     roles: asStrArray(raw.roles, ['Professional']).slice(0, 6),
     age_range: [Math.min(ageLo, ageHi), Math.max(ageLo, ageHi)],
-    regions: asStrArray(raw.regions, ['Global']).slice(0, 3),
+    regions: asStrArray(raw.regions, regionFallback.length ? regionFallback : ['Global']).slice(0, 3),
     income_skew,
     tech_range: [Math.min(techLo, techHi), Math.max(techLo, techHi)],
     rationale: (raw.rationale || '').trim().slice(0, 300),
@@ -87,6 +115,7 @@ ${geoAreas.map((area, index) => `  ${index + 1}. ${area.label}
      Bounds: north ${area.bounds.north.toFixed(5)}, south ${area.bounds.south.toFixed(5)}, east ${area.bounds.east.toFixed(5)}, west ${area.bounds.west.toFixed(5)}`).join('\n')}`
     : '';
   const discoveryBlock = formatDiscoveryAnswers(idea);
+  const regionFallback = preferredRegions(idea);
 
   const systemPrompt = `You are a market segmentation expert. Given a product, you identify the most plausible DISTINCT target audiences to test it against.
 
@@ -120,7 +149,7 @@ Return ONLY this JSON:
       "description": "one sentence in ${langName} describing who they are",
       "roles": ["3-6 concrete job titles / personas that belong to this audience"],
       "age_range": [minAge, maxAge],
-      "regions": ["1-3 regions, e.g. 'Croatia', 'DACH region', 'North America'"],
+      "regions": ["1-3 regions; if founder target market is specific, use exactly that region, e.g. '${regionFallback[0] || 'Croatia'}'"],
       "income_skew": "low | medium | high | mixed",
       "tech_range": [minTech, maxTech],
       "rationale": "one sentence in ${langName}: why this audience might (or might not) buy"
@@ -138,7 +167,11 @@ Exactly 3 segments. age 16-80, tech 1-10. Be concrete and realistic for THIS pro
   const parsed = safeParseJson<{ segments: RawSegment[] }>(raw);
 
   const segments = (parsed?.segments ?? [])
-    .map((segment, index) => sanitize(segment, index))
+    .map((segment, index) => sanitize(segment, index, regionFallback))
+    .map((segment) => {
+      if (!segment || regionFallback.length === 0) return segment;
+      return { ...segment, regions: regionFallback.slice(0, 3) };
+    })
     .filter((segment): segment is SegmentSpec => segment !== null)
     .slice(0, 3);
 
