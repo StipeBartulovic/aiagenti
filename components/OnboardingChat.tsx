@@ -22,6 +22,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
 
   const t = {
     hr: {
+      kicker: 'Setup savjetnika',
       title: 'Upoznajmo tvoj projekt',
       subtitle: 'Par odgovora pomaze da Research i Positioning savjetnik krenu od tvog stvarnog konteksta, a ne od generickih pretpostavki.',
       placeholder: 'Tvoj odgovor...',
@@ -30,12 +31,13 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
       preparing: 'Pripremam tvoje savjetnike iz razgovora...',
       host: 'Voditelj',
       skip: 'Preskoči pitanja',
-      skipHint: 'Ako si u žurbi, preskoči. Savjetnici će krenuti iz izvještaja, a kasnije ih možeš dopuniti kroz chat.',
+      skipHint: 'Ako si u žurbi, preskoči — savjetnici će krenuti iz izvještaja, a kasnije ih možeš dopuniti kroz chat.',
       benefitOne: 'bolji prijedlozi',
       benefitTwo: 'manje generičkih odgovora',
       benefitThree: 'jasniji sljedeći koraci',
     },
     en: {
+      kicker: 'Advisor setup',
       title: "Let's get to know your project",
       subtitle: 'A few answers help the Research and Positioning advisors start from your real context instead of generic assumptions.',
       placeholder: 'Your answer...',
@@ -44,7 +46,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
       preparing: 'Preparing your advisors from the conversation...',
       host: 'Host',
       skip: 'Skip questions',
-      skipHint: 'If you are in a hurry, skip this. Advisors will start from the report, and you can add context later in chat.',
+      skipHint: 'If you are in a hurry, skip this — advisors will start from the report, and you can add context later in chat.',
       benefitOne: 'better recommendations',
       benefitTwo: 'fewer generic answers',
       benefitThree: 'clearer next steps',
@@ -112,57 +114,53 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <div className="mb-6 rounded-[1.8rem] border border-zinc-800/80 bg-zinc-900/45 p-5 text-center shadow-[0_24px_60px_rgba(0,0,0,0.18)]">
-        <div className="mb-4 inline-flex -space-x-2">
-          {['🤝', '📣'].map((e, i) => (
-            <div
-              key={i}
-              className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-zinc-950 bg-zinc-800 text-base"
-            >
-              {e}
-            </div>
-          ))}
+    <div className="mx-auto w-full max-w-3xl border-2 border-[var(--ink)] bg-[var(--paper-raised)]">
+      {/* Intro: tema + benefiti + skip, sve u jednom kompaktnom retku */}
+      <div className="border-b-2 border-[var(--ink)] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="kicker !mb-0">{t.kicker}</p>
+            <h1 className="mt-1 text-xl text-[var(--ink)] sm:text-2xl">{t.title}</h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => onComplete(messages)}
+            disabled={seeding}
+            className="btn-line flex-shrink-0 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t.skip}
+          </button>
         </div>
-        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-indigo-800/50 bg-indigo-950/25 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-200">
-          <span className="h-1.5 w-1.5 rounded-full bg-indigo-300" />
-          {language === 'en' ? 'Advisor setup' : 'Setup savjetnika'}
-        </div>
-        <h1 className="mb-1 mt-4 text-2xl font-bold text-white font-title">{t.title}</h1>
-        <p className="text-zinc-400 text-sm leading-relaxed">{t.subtitle}</p>
-        <div className="mt-4 grid gap-2 text-left sm:grid-cols-3">
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--ink-soft)]">{t.subtitle}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
           {[t.benefitOne, t.benefitTwo, t.benefitThree].map((benefit) => (
-            <div key={benefit} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-300">
-              <span className="mr-1 text-indigo-300">✓</span>
+            <span
+              key={benefit}
+              className="border border-[var(--hairline-strong)] bg-[var(--paper-dim)] px-2.5 py-1 text-[11px] text-[var(--ink-soft)]"
+            >
+              <span className="mr-1" style={{ color: 'var(--verdict-green)' }}>✓</span>
               {benefit}
-            </div>
+            </span>
           ))}
         </div>
-        <p className="mt-3 text-xs leading-relaxed text-zinc-500">{t.skipHint}</p>
-        <button
-          type="button"
-          onClick={() => onComplete(messages)}
-          disabled={seeding}
-          className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:border-indigo-700 hover:text-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {t.skip}
-        </button>
+        <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-faint)]">{t.skipHint}</p>
       </div>
 
-      <div className="flex min-h-[60vh] flex-col rounded-[1.8rem] border border-zinc-800 bg-zinc-900/60 shadow-[0_24px_60px_rgba(0,0,0,0.18)] sm:min-h-[58vh]">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Chat: raste sa sadrzajem, ne forsira ogroman prazan prostor */}
+      <div className="flex min-h-[280px] max-h-[55vh] flex-col">
+        <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {m.role === 'assistant' && (
-                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm flex-shrink-0 mr-2 mt-0.5">
+                <div className="mr-2 mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--verdict-green)] text-sm">
                   ✨
                 </div>
               )}
               <div
-                className={`max-w-[88%] sm:max-w-[80%] rounded-[1.4rem] px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[88%] px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap sm:max-w-[80%] ${
                   m.role === 'user'
-                    ? 'bg-indigo-600 text-white rounded-br-sm'
-                    : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
+                    ? 'bg-[var(--ink)] text-[var(--paper)]'
+                    : 'bg-[var(--paper-dim)] text-[var(--ink)]'
                 }`}
               >
                 {m.content}
@@ -172,17 +170,17 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
 
           {(sending || seeding) && (
             <div className="flex justify-start">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-sm flex-shrink-0 mr-2">
+              <div className="mr-2 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--verdict-green)] text-sm">
                 ✨
               </div>
-              <div className="bg-zinc-800 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-[var(--paper-dim)] px-4 py-3">
                 {seeding ? (
-                  <span className="text-xs text-zinc-300">{t.preparing}</span>
+                  <span className="text-xs text-[var(--ink-soft)]">{t.preparing}</span>
                 ) : (
                   [0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce"
+                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--ink-faint)]"
                       style={{ animationDelay: `${i * 0.15}s` }}
                     />
                   ))
@@ -192,7 +190,7 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
           )}
         </div>
 
-        <div className="p-3 border-t border-zinc-800">
+        <div className="border-t-2 border-[var(--ink)] p-3">
           <div className="flex flex-col gap-2 sm:flex-row">
             <textarea
               value={input}
@@ -206,12 +204,12 @@ export default function OnboardingChat({ language, ideaSummary, seeding, onCompl
               rows={1}
               disabled={finished || seeding}
               placeholder={t.placeholder}
-              className="min-h-[50px] flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-indigo-500 focus:outline-none max-h-32 disabled:opacity-50"
+              className="paper-field min-h-[50px] max-h-32 flex-1 resize-none text-sm disabled:opacity-50"
             />
             <button
               onClick={handleSend}
               disabled={sending || finished || seeding || !input.trim()}
-              className="h-[50px] rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-600 sm:flex-shrink-0"
+              className="btn-ink h-[50px] flex-shrink-0 text-sm disabled:opacity-60"
             >
               {t.send}
             </button>

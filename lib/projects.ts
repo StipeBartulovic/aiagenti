@@ -9,6 +9,8 @@ import type {
   ChatMessage,
   ProjectTask,
   MarketIntelligence,
+  SessionDigest,
+  UnitEconomicsInputs,
 } from './types';
 import { getTauriInvoke } from './tauri';
 
@@ -28,6 +30,8 @@ type ProjectCommand =
   | 'project_update_panel'
   | 'project_update_tasks'
   | 'project_update_market'
+  | 'project_update_digests'
+  | 'project_update_unit_economics'
   | 'project_delete'
   | 'project_import'
   | 'project_restore_workspace'
@@ -106,6 +110,7 @@ function normalizeImportedProject(rawProject: ImportableProject): SavedProject {
       ? rawProject.chats as Partial<Record<string, ChatMessage[]>>
       : {},
     market: rawProject.market ?? null,
+    digests: Array.isArray(rawProject.digests) ? rawProject.digests as SessionDigest[] : [],
     summary,
     created_at: typeof rawProject.created_at === 'string' ? rawProject.created_at : timestamp,
     updated_at: timestamp,
@@ -258,6 +263,8 @@ export async function createProject(
     panel: [],
     market: null,
     tasks: [],
+    digests: [],
+    unit_economics: null,
     chats: {},
     summary: buildSummary(input.idea, input.report),
     created_at: timestamp,
@@ -355,6 +362,31 @@ export async function updateProjectTasks(
 
   const timestamp = nowIso();
   await patchProject(projectId, (project) => ({ ...project, tasks, updated_at: timestamp }));
+}
+
+const DIGEST_CAP = 25;
+
+export async function updateProjectDigests(
+  projectId: string,
+  digests: SessionDigest[]
+): Promise<void> {
+  const tauriResult = await invokeProject<void>('project_update_digests', { projectId, digests });
+  if (tauriResult.used) return;
+
+  const timestamp = nowIso();
+  const capped = digests.slice(0, DIGEST_CAP);
+  await patchProject(projectId, (project) => ({ ...project, digests: capped, updated_at: timestamp }));
+}
+
+export async function updateProjectUnitEconomics(
+  projectId: string,
+  unitEconomics: UnitEconomicsInputs
+): Promise<void> {
+  const tauriResult = await invokeProject<void>('project_update_unit_economics', { projectId, unitEconomics });
+  if (tauriResult.used) return;
+
+  const timestamp = nowIso();
+  await patchProject(projectId, (project) => ({ ...project, unit_economics: unitEconomics, updated_at: timestamp }));
 }
 
 export async function deleteProject(projectId: string): Promise<void> {

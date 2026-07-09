@@ -436,7 +436,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
  */
 export function buildAgentContext(
   knowledge: ProjectKnowledge,
-  section: KBSectionKey
+  section: KBSectionKey,
+  marketDigest?: string
 ): string {
   const lines: string[] = [];
   const now = new Date().toISOString();
@@ -450,6 +451,15 @@ export function buildAgentContext(
 
   if (knowledge.digest) {
     lines.push('PROJECT DIGEST:', knowledge.digest, '');
+  }
+
+  if (marketDigest?.trim()) {
+    lines.push(
+      'REAL MARKET RESEARCH (grounded — from live web research the founder ran, NOT synthetic):',
+      marketDigest.trim(),
+      'When you reference a competitor or a market fact, prefer these real names/prices over a generic invented alternative, and make clear it comes from the founder\'s own market research rather than a guess.',
+      ''
+    );
   }
 
   const product = knowledge.sections.product;

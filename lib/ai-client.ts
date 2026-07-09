@@ -8,6 +8,7 @@ type ApiEndpoint =
   | 'audiences'
   | 'chat'
   | 'conversion'
+  | 'debate'
   | 'conjoint'
   | 'discovery'
   | 'idea-brief'
@@ -19,6 +20,7 @@ type ApiEndpoint =
   | 'obsidian-build'
   | 'pricing'
   | 'research'
+  | 'session-digest'
   | 'strategy'
   | 'tasks'
   | 'translate'
@@ -30,6 +32,7 @@ type AiCommand =
   | 'ai_audiences'
   | 'ai_chat'
   | 'ai_conversion'
+  | 'ai_debate'
   | 'ai_conjoint'
   | 'ai_discovery'
   | 'ai_idea_brief'
@@ -41,6 +44,7 @@ type AiCommand =
   | 'ai_obsidian_build'
   | 'ai_pricing'
   | 'ai_research'
+  | 'ai_session_digest'
   | 'ai_strategy'
   | 'ai_tasks'
   | 'ai_translate'
@@ -52,6 +56,7 @@ const endpointCommands: Record<ApiEndpoint, AiCommand> = {
   audiences: 'ai_audiences',
   chat: 'ai_chat',
   conversion: 'ai_conversion',
+  debate: 'ai_debate',
   conjoint: 'ai_conjoint',
   discovery: 'ai_discovery',
   'idea-brief': 'ai_idea_brief',
@@ -63,6 +68,7 @@ const endpointCommands: Record<ApiEndpoint, AiCommand> = {
   'obsidian-build': 'ai_obsidian_build',
   pricing: 'ai_pricing',
   research: 'ai_research',
+  'session-digest': 'ai_session_digest',
   strategy: 'ai_strategy',
   tasks: 'ai_tasks',
   translate: 'ai_translate',
@@ -154,6 +160,9 @@ export const aiClient = {
   advisorChat: <TResponse = unknown>(payload: unknown, fallbackError = 'Advisor chat failed') =>
     callAi<TResponse>('chat', payload, fallbackError),
 
+  runDebate: <TResponse = unknown>(payload: unknown, fallbackError = 'Advisor debate failed') =>
+    callAi<TResponse>('debate', payload, fallbackError),
+
   triageAdvisors: <TResponse = unknown>(payload: unknown, fallbackError = 'Advisor triage failed') =>
     callAi<TResponse>('triage', payload, fallbackError),
 
@@ -183,6 +192,9 @@ export const aiClient = {
 
   runResearch: <TResponse = unknown>(payload: unknown, fallbackError = 'Research failed') =>
     callAi<TResponse>('research', payload, fallbackError),
+
+  buildSessionDigest: <TResponse = unknown>(payload: unknown, fallbackError = 'Session digest failed') =>
+    callAi<TResponse>('session-digest', payload, fallbackError),
 
   buildConversion: <TResponse = unknown>(payload: unknown, fallbackError = 'Conversion plan failed') =>
     callAi<TResponse>('conversion', payload, fallbackError),

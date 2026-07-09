@@ -6,15 +6,20 @@ import { useAuth } from '@/context/AuthContext';
 import { aiClient } from '@/lib/ai-client';
 import { consolidateKnowledge, SECTION_KEYS, SECTION_LABELS } from '@/lib/knowledge';
 import { buildRelatedIndex, type RelatedLink } from '@/lib/related';
-import { getProject, listProjects, updateProjectKnowledge } from '@/lib/projects';
+import { getProject, listProjects, updateProjectKnowledge, updateProjectUnitEconomics } from '@/lib/projects';
 import { TOKEN_COSTS, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
+import ReadinessMeter from '@/components/ReadinessMeter';
+import FinancialCard from '@/components/FinancialCard';
+import { defaultUnitEconomics } from '@/lib/unit-economics';
 import type {
   IdeaFormData,
   KBSectionKey,
   MemoryItem,
   MemoryKind,
+  MarketIntelligence,
   ProjectKnowledge,
+  UnitEconomicsInputs,
   ValidationReport,
 } from '@/lib/types';
 
@@ -74,6 +79,8 @@ export default function PlanPage() {
   const [idea, setIdea] = useState<IdeaFormData | null>(null);
   const [report, setReport] = useState<ValidationReport | null>(null);
   const [knowledge, setKnowledge] = useState<ProjectKnowledge | null>(null);
+  const [market, setMarket] = useState<MarketIntelligence | null>(null);
+  const [unitEconomics, setUnitEconomics] = useState<UnitEconomicsInputs>(defaultUnitEconomics());
   const [translatedKnowledge, setTranslatedKnowledge] = useState<ProjectKnowledge | null>(null);
   const [translationKey, setTranslationKey] = useState('');
   const [translating, setTranslating] = useState(false);
@@ -193,6 +200,8 @@ export default function PlanPage() {
             setIdea(proj.idea);
             setReport(proj.report);
             setKnowledge(proj.knowledge);
+            setMarket(proj.market ?? null);
+            setUnitEconomics(proj.unit_economics ?? defaultUnitEconomics());
             setBooting(false);
             return;
           }
@@ -206,6 +215,8 @@ export default function PlanPage() {
           setIdea(latest.idea);
           setReport(latest.report);
           setKnowledge(latest.knowledge);
+          setMarket(latest.market ?? null);
+          setUnitEconomics(latest.unit_economics ?? defaultUnitEconomics());
         }
       } catch (err) {
         console.error('Plan boot error:', err);
@@ -271,6 +282,13 @@ export default function PlanPage() {
       active = false;
     };
   }, [knowledge, language, projectId, t.translationError, translatedKnowledge, translationKey]);
+
+  const handleCommitUnitEconomics = (next: UnitEconomicsInputs) => {
+    setUnitEconomics(next);
+    if (projectId) {
+      void updateProjectUnitEconomics(projectId, next).catch((err) => console.error('Unit economics persist error:', err));
+    }
+  };
 
   const handleSeed = async () => {
     if (!idea || !projectId || seeding) return;
@@ -560,6 +578,9 @@ export default function PlanPage() {
               </span>
             )}
           </div>
+          <div className="mt-5 max-w-2xl">
+            <ReadinessMeter language={language} input={{ report, knowledge, idea, market }} />
+          </div>
         </section>
 
         {!displayKnowledge ? (
@@ -601,6 +622,17 @@ export default function PlanPage() {
                 )}
               </section>
             )}
+
+            {/* Financijska kartica: unit economics, čisti izračun bez AI-ja */}
+            <section className="mt-10">
+              <FinancialCard
+                language={language}
+                inputs={unitEconomics}
+                productName={idea.product_name}
+                priceHint={idea.price_model}
+                onCommit={handleCommitUnitEconomics}
+              />
+            </section>
 
             {/* Ključni zapisi: odluke / rizici / preferencije */}
             <section className="mt-10">

@@ -12,7 +12,9 @@ export type TokenAction =
   | 'advisor_setup'
   | 'discovery_question'
   | 'market_scope'
-  | 'market_research';
+  | 'market_research'
+  | 'session_digest'
+  | 'advisor_debate';
 
 export const TOKEN_STORAGE_KEY = 'aivalidator_tokens_v1';
 export const TOKEN_STARTER_GRANT_KEY = 'aivalidator_tokens_starter_granted_v1';
@@ -43,6 +45,8 @@ export const TOKEN_COSTS: Record<TokenAction, number> = {
   discovery_question: 90,
   market_scope: 50,
   market_research: 750,
+  session_digest: 220,
+  advisor_debate: 950,
 };
 
 export function readTokenBalance(): number {

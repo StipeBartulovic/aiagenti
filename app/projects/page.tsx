@@ -12,6 +12,7 @@ import {
   restoreWorkspaceFromText,
   eraseAllLocalProjects,
 } from '@/lib/projects';
+import ReadinessMeter from '@/components/ReadinessMeter';
 import type { SavedProject } from '@/lib/types';
 
 export default function ProjectsPage() {
@@ -518,6 +519,12 @@ export default function ProjectsPage() {
                       {new Date(project.created_at).toLocaleString(language === 'en' ? 'en-US' : 'hr-HR')}
                       {project.summary.personas_count != null && <> · {project.summary.personas_count} {t.buyers}</>}
                     </p>
+                    <ReadinessMeter
+                      language={language}
+                      input={{ report: project.report, knowledge: project.knowledge, idea: project.idea, market: project.market }}
+                      variant="compact"
+                      className="mt-2"
+                    />
                   </div>
 
                   {/* Akcije */}

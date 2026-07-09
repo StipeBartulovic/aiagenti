@@ -84,10 +84,15 @@ function sanitizeExtracted(result: ExtractResult, source: MemoryItem['source']):
       .filter((item): item is MemoryItem => Boolean(item))
       .slice(0, 12);
 
+    const asStringList = (value: unknown, max: number): string[] =>
+      Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean).slice(0, max)
+        : [];
+
     sections[key] = {
       ...section,
-      facts: section.facts?.map((item) => item.trim()).filter(Boolean).slice(0, 12),
-      gaps: section.gaps?.map((item) => item.trim()).filter(Boolean).slice(0, 10),
+      facts: asStringList(section.facts, 12),
+      gaps: asStringList(section.gaps, 10),
       memories,
     };
   }

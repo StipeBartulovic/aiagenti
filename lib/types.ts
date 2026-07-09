@@ -590,6 +590,51 @@ export interface ChatMessage {
   };
   /** skuplji/dublji odgovor savjetnika */
   response_mode?: 'fast' | 'deep';
+  /** Nazivi stvarnih konkurenata (iz istraživanja tržišta) koje ovaj odgovor doslovno spominje — čisti string-match, ne LLM samoprijava. */
+  market_grounded?: string[];
+  /** Označava presudu suca na kraju boardroom debate (lib/server/debate.ts) */
+  debate_verdict?: boolean;
+}
+
+/**
+ * Unit economics pretpostavke koje founder ručno unosi i uređuje (biznis plan).
+ * Sav izračun je čisti kod (lib/unit-economics.ts) — nema AI poziva.
+ */
+export interface UnitEconomicsInputs {
+  /** Cijena po jedinici/kupcu za period (npr. mjesečna pretplata ili cijena narudžbe) */
+  price: number;
+  /** Varijabilni trošak po istoj jedinici (COGS, provizije, dostava...) */
+  variable_cost: number;
+  /** Fiksni troškovi za isti period (najam, plaće, alati...) */
+  fixed_costs: number;
+  /** Očekivani broj jedinica/kupaca u periodu */
+  expected_volume: number;
+  updated_at: string;
+}
+
+/** Jedna akcija iz zapisnika sesije — pretvara se izravno u ProjectTask. */
+export interface SessionDigestAction {
+  title: string;
+  details: string;
+  owner_agent?: AgentId;
+  priority: 'low' | 'medium' | 'high';
+}
+
+/**
+ * Zapisnik sesije — "prikvačeni artefakt" koji destilira dio panel-chata (od zadnjeg
+ * zapisnika do sad) u odluke, otvorena pitanja i akcije. Rješava problem da savjeti
+ * savjetnika ostaju zakopani u dugom chatu i nikad se ne konsolidiraju.
+ */
+export interface SessionDigest {
+  id: string;
+  created_at: string;
+  /** 2-3 rečenice: što je ova sesija pokrila */
+  summary: string;
+  decisions: string[];
+  open_questions: string[];
+  actions: SessionDigestAction[];
+  /** Koliko poruka je ovaj zapisnik pokrio (informativno) */
+  message_count: number;
 }
 
 /** Jedan actionable task iz razgovora sa savjetnicima. */
@@ -634,6 +679,10 @@ export interface SavedProject {
   market_history?: MarketIntelligence[];
   /** Jednostavni task manager iz razgovora sa savjetnicima. */
   tasks: ProjectTask[];
+  /** Zapisnici sesija (najnoviji prvi) — prikvačeni sažeci panel-chata. */
+  digests?: SessionDigest[];
+  /** Unit economics pretpostavke iz financijske kartice (biznis plan). */
+  unit_economics?: UnitEconomicsInputs | null;
   /** @deprecated stari 1-na-1 chatovi po agentu; zadržano za kompatibilnost starih dokumenata */
   chats: Partial<Record<AgentId, ChatMessage[]>>;
 

@@ -300,6 +300,7 @@ export function parseChatRequest(raw: unknown): ChatRequest {
     intent: readEnum(body, 'intent', CHAT_INTENTS)!,
     participants,
     deepMode: readOptionalBoolean(body, 'deepMode'),
+    marketCompetitorNames: readStringArray(body, 'marketCompetitorNames', 12, 120),
   };
 }
 

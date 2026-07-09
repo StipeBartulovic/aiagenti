@@ -9,20 +9,23 @@ import {
   updateProjectKnowledge,
   updateProjectPanel,
   updateProjectTasks,
+  updateProjectDigests,
 } from '@/lib/projects';
 import OnboardingChat from '@/components/OnboardingChat';
 import PanelChat from '@/components/PanelChat';
 import TokenWallet from '@/components/TokenWallet';
+import ReadinessMeter from '@/components/ReadinessMeter';
 import { aiClient } from '@/lib/ai-client';
 import { TOKEN_COSTS, spendTokens } from '@/lib/tokens';
 import { tokenShortfallMessage } from '@/lib/token-messages';
-import { ChevronDown, ChevronUp, Menu, Settings2 } from 'lucide-react';
 import type {
   IdeaFormData,
   ValidationReport,
   ProjectKnowledge,
   ChatMessage,
   ProjectTask,
+  SessionDigest,
+  MarketIntelligence,
 } from '@/lib/types';
 
 export default function AdvisorsPage() {
@@ -36,17 +39,29 @@ export default function AdvisorsPage() {
   const [knowledge, setKnowledge] = useState<ProjectKnowledge | null>(null);
   const [panel, setPanel] = useState<ChatMessage[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [digests, setDigests] = useState<SessionDigest[]>([]);
+  const [market, setMarket] = useState<MarketIntelligence | null>(null);
+  const [prefillInput, setPrefillInput] = useState('');
+
+  useEffect(() => {
+    const prefill = sessionStorage.getItem('aivalidator_advisor_prefill');
+    if (prefill) {
+      setPrefillInput(prefill);
+      sessionStorage.removeItem('aivalidator_advisor_prefill');
+    }
+  }, []);
   const [seeding, setSeeding] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [fatalError, setFatalError] = useState('');
-  const [showMobileUtilities, setShowMobileUtilities] = useState(false);
   const bootedRef = useRef(false);
 
   const t = {
     hr: {
-      back: '← Natrag',
+      kicker: 'Protokol — savjetnici',
+      home: '← Početna',
       title: 'Next-step savjetnici',
+      subtitle: 'Šest savjetnika sjedi s druge strane stola i sluša svaki tvoj unos. Kad netko ima konkretan doprinos, podigne ruku — klikni ga da mu daš riječ. Klikni bilo koga izravno da ga pitaš za mišljenje. Sve se sprema lokalno uz ovaj projekt.',
       bootingTitle: 'Pripremam AI savjetnike',
       booting: 'Spajam projekt, izvještaj i memoriju. Ovo obično traje par sekundi.',
       noProjectTitle: 'Još nema projekta za savjetnike',
@@ -58,23 +73,20 @@ export default function AdvisorsPage() {
       retrySeed: 'Pokušaj ponovno',
       seedError: 'Greška pri pripremi savjetnika. Pokušaj ponovno.',
       tokenError: (missing: number) => tokenShortfallMessage('hr', 'Priprema savjetnika', TOKEN_COSTS.advisor_setup, missing),
-      localSaved: 'Lokalno spremljeno',
-      localSaving: 'Spremam lokalno...',
+      localSaved: 'Spremljeno',
+      localSaving: 'Spremam...',
       localUnsaved: 'Čeka prvo spremanje',
-      localError: 'Lokalno spremanje nije uspjelo',
+      localError: 'Spremanje nije uspjelo',
       savedAt: (value: string) => `Zadnje spremanje: ${value}`,
-      subtitle: 'Najprije Research i Positioning smjer, pa tek onda ostali specijalisti ako zatrebaju.',
-      utilities: 'Alati i status',
-      hideUtilities: 'Sakrij',
-      showUtilities: 'Prikaži',
-      mobileHintTitle: 'Kreni od sljedeceg poteza',
-      mobileHintText: 'Na telefonu prvo otvori Research ili Positioning smjer u panelu, pa tek onda idi u plan i taskove.',
-      workspaceReady: 'Workspace je spreman',
-      workspaceReadyText: 'Projekt, memorija i razgovor su spojeni. Sve sto napravis ovdje sprema se lokalno uz ovaj projekt.',
+      plan: 'Biznis plan',
+      market: 'Tržište',
+      settings: 'Postavke',
     },
     en: {
-      back: '← Back',
+      kicker: 'Protocol — advisors',
+      home: '← Home',
       title: 'Next-step advisors',
+      subtitle: 'Six advisors sit across the table and listen to everything you type. When one of them has something concrete to add, they raise a hand — click them to give the floor. Click anyone directly to ask for their take. Everything here saves locally with this project.',
       bootingTitle: 'Preparing AI advisors',
       booting: 'Connecting your project, report, and memory. This usually takes a few seconds.',
       noProjectTitle: 'No project for advisors yet',
@@ -86,19 +98,14 @@ export default function AdvisorsPage() {
       retrySeed: 'Try again',
       seedError: 'Error preparing advisors. Try again.',
       tokenError: (missing: number) => tokenShortfallMessage('en', 'Advisor setup', TOKEN_COSTS.advisor_setup, missing),
-      localSaved: 'Saved locally',
-      localSaving: 'Saving locally...',
+      localSaved: 'Saved',
+      localSaving: 'Saving...',
       localUnsaved: 'Waiting for first save',
-      localError: 'Local save failed',
+      localError: 'Save failed',
       savedAt: (value: string) => `Last saved: ${value}`,
-      subtitle: 'Start with Research and Positioning, then bring in the other specialists only when needed.',
-      utilities: 'Tools and status',
-      hideUtilities: 'Hide',
-      showUtilities: 'Show',
-      mobileHintTitle: 'Start from the next move',
-      mobileHintText: 'On phone, begin with the Research or Positioning path inside the panel before jumping into plan and tasks.',
-      workspaceReady: 'Workspace is ready',
-      workspaceReadyText: 'The project, memory, and conversation are connected. Everything you do here is saved locally with this project.',
+      plan: 'Business plan',
+      market: 'Market',
+      settings: 'Settings',
     },
   }[language];
 
@@ -162,6 +169,8 @@ export default function AdvisorsPage() {
             setKnowledge(proj.knowledge);
             setPanel(proj.panel || []);
             setTasks(proj.tasks || []);
+            setDigests(proj.digests || []);
+            setMarket(proj.market ?? null);
             setSaveState('saved');
             setSavedAt(new Date(proj.updated_at || proj.created_at));
             setBooting(false);
@@ -238,203 +247,140 @@ export default function AdvisorsPage() {
     }
   };
 
+  const handlePersistDigests = (nextDigests: SessionDigest[]) => {
+    setDigests(nextDigests);
+    if (projectId) {
+      markSaving();
+      void updateProjectDigests(projectId, nextDigests).then(markSaved).catch(markSaveError);
+    }
+  };
+
+  const saveStatusStyle: Record<typeof saveState, string> = {
+    saved: 'var(--verdict-green)',
+    saving: 'var(--annotate)',
+    error: 'var(--verdict-red)',
+    idle: 'var(--ink-faint)',
+  };
+
   // ── Render states ──
   if (authLoading || !user || booting) {
     return (
-      <div className="paper-root paper-advisors min-h-screen flex items-center justify-center">
-        <div className="mx-4 max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 text-center shadow-2xl shadow-indigo-950/20">
-          <span className="mx-auto mb-4 block w-9 h-9 border-4 border-zinc-800 border-t-indigo-500 rounded-full animate-spin" />
-          <h1 className="text-lg font-semibold text-white">{t.bootingTitle}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t.booting}</p>
-        </div>
+      <div className="paper-root paper-advisors flex min-h-screen flex-col items-center justify-center gap-3">
+        <span className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--hairline)] border-t-[var(--verdict-red)]" />
+        <span className="font-data text-xs uppercase tracking-[0.2em] text-[var(--ink-faint)]">{t.bootingTitle}</span>
+        <p className="max-w-xs text-center text-xs leading-relaxed text-[var(--ink-faint)]">{t.booting}</p>
       </div>
     );
   }
 
   return (
-    <div className="paper-root paper-advisors min-h-screen text-zinc-100">
-      <nav className="border-b border-zinc-800 bg-zinc-950/90 px-4 py-4 sm:px-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <button
-                onClick={() => router.push(report ? '/results' : '/')}
-                className="text-zinc-400 hover:text-white transition-colors text-sm cursor-pointer"
-              >
-                {t.back}
-              </button>
-              <span className="text-zinc-700">|</span>
-              <div className="min-w-0 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 shadow-lg shadow-indigo-950/30">
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" fillOpacity="0.9" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-white">{t.title}</span>
-                  <p className="mt-0.5 text-xs text-zinc-500">{t.subtitle}</p>
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowMobileUtilities((value) => !value)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white lg:hidden"
-            >
-              <Menu className="h-3.5 w-3.5" />
-              {showMobileUtilities ? t.hideUtilities : t.showUtilities}
-              {showMobileUtilities ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+    <div className="paper-root paper-advisors min-h-screen">
+      <nav className="border-b-2 border-[var(--ink)] px-4 sm:px-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 py-4">
+          <button type="button" onClick={() => router.push(report ? '/results' : '/')} className="link-ink text-sm">
+            {t.home}
+          </button>
+          <div className="flex flex-wrap items-center gap-5">
+            <button type="button" onClick={() => router.push('/plan')} className="link-ink text-sm">
+              {t.plan}
             </button>
-          </div>
-
-          <div className={`${showMobileUtilities ? 'flex' : 'hidden'} flex-col gap-3 rounded-[1.6rem] border border-zinc-800/80 bg-zinc-900/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.14)] lg:flex lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <TokenWallet language={language} compact />
-              <button
-                type="button"
-                onClick={() => router.push('/plan')}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
-                title={language === 'en' ? 'Open the business plan dossier' : 'Otvori dosje biznis plana'}
-              >
-                📋 {language === 'en' ? 'Business plan' : 'Biznis plan'}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push('/market')}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
-                title={language === 'en' ? 'Open market research' : 'Otvori istraživanje tržišta'}
-              >
-                🌍 {language === 'en' ? 'Market' : 'Tržište'}
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push('/settings')}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white"
-                title={language === 'en' ? 'Open settings' : 'Otvori postavke'}
-              >
-                <Settings2 className="h-3.5 w-3.5" />
-                {language === 'en' ? 'Settings' : 'Postavke'}
-              </button>
-            </div>
-            <div
-              className={`rounded-xl border px-3 py-2 text-xs ${
-                saveState === 'saved'
-                  ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-200'
-                  : saveState === 'saving'
-                  ? 'border-cyan-800/50 bg-cyan-950/30 text-cyan-100'
-                  : saveState === 'error'
-                  ? 'border-red-800/60 bg-red-950/30 text-red-200'
-                  : 'border-zinc-800 bg-zinc-900 text-zinc-400'
-              }`}
-              title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
-            >
-              <span className="font-semibold">{localSaveLabel}</span>
-              {savedAtLabel && saveState === 'saved' && (
-                <span className="ml-2 hidden text-zinc-400 sm:inline">{savedAtLabel}</span>
-              )}
-            </div>
+            <button type="button" onClick={() => router.push('/market')} className="link-ink text-sm">
+              {t.market}
+            </button>
+            <button type="button" onClick={() => router.push('/settings')} className="link-ink text-sm">
+              {t.settings}
+            </button>
           </div>
         </div>
       </nav>
 
-      <main className="px-4 py-6 sm:py-8">
-        {!idea ? (
-          <div className="mx-auto max-w-xl rounded-[1.8rem] border border-zinc-800 bg-zinc-900/70 p-8 text-center shadow-2xl shadow-zinc-950/30">
-            <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600/15 text-indigo-200">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 4V20M4 12H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+      <main className="mx-auto max-w-6xl px-4 pb-16 sm:px-8">
+        <section className="pt-10 sm:pt-12">
+          <p className="kicker">{t.kicker}</p>
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <h1 className="text-3xl text-[var(--ink)] sm:text-4xl">{t.title}</h1>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--ink-soft)]">{t.subtitle}</p>
             </div>
-            <h1 className="text-2xl font-bold text-white">{t.noProjectTitle}</h1>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-400">{t.noProject}</p>
-            <button
-              onClick={() => router.push('/')}
-              className="mt-6 inline-block rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 cursor-pointer"
-            >
-              {t.goValidate}
-            </button>
-          </div>
-        ) : !knowledge ? (
-          <div className="space-y-4">
-            <OnboardingChat
-              language={language}
-              seeding={seeding}
-              ideaSummary={`Product: ${idea.product_name} (${idea.business_model}). Pitch: ${idea.elevator_pitch}. ${idea.detailed_description || ''} ${idea.b2b2c_consumer_description || ''} ${idea.b2b2c_business_description || ''} Price: ${idea.price_model}.`}
-              onComplete={handleOnboardingComplete}
-            />
-            {fatalError && (
-              <div className="mx-auto max-w-2xl rounded-2xl border border-red-900/60 bg-red-950/25 p-4">
-                <h2 className="text-sm font-semibold text-red-100">{t.errorTitle}</h2>
-                <p className="mt-1 text-sm leading-relaxed text-red-200/80">{fatalError}</p>
-                <p className="mt-2 text-xs leading-relaxed text-zinc-400">{t.errorHelp}</p>
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={handleRetrySeed}
-                    disabled={seeding}
-                    className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {seeding ? t.bootingTitle : t.retrySeed}
-                  </button>
-                  {report && (
-                    <button
-                      type="button"
-                      onClick={() => router.push('/results')}
-                      className="rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:text-white"
-                    >
-                      {t.backToResults}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => router.push('/')}
-                    className="rounded-xl border border-zinc-800 px-4 py-2 text-sm font-semibold text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-100"
-                  >
-                    {t.goValidate}
-                  </button>
-                </div>
-              </div>
+            {idea && (
+              <span
+                className="font-data whitespace-nowrap text-[11px] uppercase tracking-wider"
+                style={{ color: saveStatusStyle[saveState] }}
+                title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
+              >
+                ● {localSaveLabel}
+              </span>
             )}
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-[1.4rem] border border-emerald-900/40 bg-emerald-950/10 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-bold text-emerald-100">{t.workspaceReady}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-emerald-100/75">{t.workspaceReadyText}</p>
-                </div>
-                <div
-                  className={`rounded-xl border px-3 py-2 text-xs ${
-                    saveState === 'saved'
-                      ? 'border-emerald-800/50 bg-emerald-950/30 text-emerald-200'
-                      : saveState === 'saving'
-                      ? 'border-cyan-800/50 bg-cyan-950/30 text-cyan-100'
-                      : saveState === 'error'
-                      ? 'border-red-800/60 bg-red-950/30 text-red-200'
-                      : 'border-zinc-800 bg-zinc-900 text-zinc-400'
-                  }`}
-                  title={savedAtLabel ? t.savedAt(savedAtLabel) : localSaveLabel}
-                >
-                  <span className="font-semibold">{localSaveLabel}</span>
-                </div>
-              </div>
+
+          {idea && (
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <TokenWallet language={language} compact />
+              {knowledge && <ReadinessMeter language={language} input={{ report, knowledge, idea, market }} variant="compact" />}
             </div>
-            <div className="rounded-[1.4rem] border border-cyan-900/40 bg-cyan-950/10 px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.12)] lg:hidden">
-              <p className="text-sm font-bold text-cyan-100">{t.mobileHintTitle}</p>
-              <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">{t.mobileHintText}</p>
+          )}
+        </section>
+
+        <div className="mt-8">
+          {!idea ? (
+            <div className="sheet mx-auto max-w-xl p-8 text-center">
+              <p className="kicker">{t.kicker}</p>
+              <h2 className="mt-3 text-2xl text-[var(--ink)]">{t.noProjectTitle}</h2>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">{t.noProject}</p>
+              <button onClick={() => router.push('/')} className="btn-ink mt-6 text-sm">
+                {t.goValidate}
+              </button>
             </div>
+          ) : !knowledge ? (
+            <div className="space-y-4">
+              <OnboardingChat
+                language={language}
+                seeding={seeding}
+                ideaSummary={`Product: ${idea.product_name} (${idea.business_model}). Pitch: ${idea.elevator_pitch}. ${idea.detailed_description || ''} ${idea.b2b2c_consumer_description || ''} ${idea.b2b2c_business_description || ''} Price: ${idea.price_model}.`}
+                onComplete={handleOnboardingComplete}
+              />
+              {fatalError && (
+                <div className="sheet mx-auto max-w-2xl border-l-4 !border-l-[var(--verdict-red)] p-4">
+                  <h2 className="text-sm font-semibold text-[var(--ink)]">{t.errorTitle}</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-[var(--ink-soft)]">{fatalError}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--ink-faint)]">{t.errorHelp}</p>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={handleRetrySeed}
+                      disabled={seeding}
+                      className="btn-ink text-sm disabled:opacity-60"
+                    >
+                      {seeding ? t.bootingTitle : t.retrySeed}
+                    </button>
+                    {report && (
+                      <button type="button" onClick={() => router.push('/results')} className="btn-line text-sm">
+                        {t.backToResults}
+                      </button>
+                    )}
+                    <button type="button" onClick={() => router.push('/')} className="link-ink text-sm">
+                      {t.goValidate}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
             <PanelChat
               language={language}
               knowledge={knowledge}
+              market={market}
               initialMessages={panel}
               initialTasks={tasks}
+              initialDigests={digests}
+              initialInput={prefillInput}
               onPersistPanel={handlePersistPanel}
               onKnowledgeUpdate={handleKnowledgeUpdate}
               onPersistTasks={handlePersistTasks}
+              onPersistDigests={handlePersistDigests}
             />
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );

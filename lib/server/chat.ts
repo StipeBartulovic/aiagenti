@@ -25,6 +25,8 @@ export interface ChatRequest {
   intent: 'open' | 'reply' | 'join';
   participants: AgentId[];
   deepMode?: boolean;
+  /** Imena stvarnih konkurenata iz spremljenog istraživanja tržišta — samo za detekciju "utemeljeno na tvom istraživanju" badgea, čisti string-match, bez LLM-a. */
+  marketCompetitorNames?: string[];
 }
 
 interface ResearchStatus {
@@ -41,6 +43,16 @@ export interface ChatResponse {
   sources?: ResearchSource[];
   research?: ResearchStatus;
   response_mode: 'deep' | 'fast';
+  /** Nazivi stvarnih konkurenata (iz istraživanja tržišta) koje odgovor doslovno spominje — čisti string-match, ne LLM samoprijava. */
+  market_grounded?: string[];
+}
+
+/** Koje od stvarnih konkurenata odgovor doslovno spominje — čisti kod, nikakav LLM poziv. */
+function detectMarketGrounding(reply: string, competitorNames: string[] | undefined): string[] | undefined {
+  if (!competitorNames?.length || !reply) return undefined;
+  const lowerReply = reply.toLowerCase();
+  const matched = competitorNames.filter((name) => name.trim().length > 1 && lowerReply.includes(name.trim().toLowerCase()));
+  return matched.length ? [...new Set(matched)].slice(0, 6) : undefined;
 }
 
 /** Spaja uzastopne poruke iste uloge (DeepSeek voli izmjenu user/assistant). */
@@ -301,5 +313,7 @@ ${deepMode ? `DEEP ANSWER MODE IS ON:
     }
   }
 
-  return { reply, sources, research, response_mode: deepMode ? 'deep' : 'fast' };
+  const market_grounded = detectMarketGrounding(reply, body.marketCompetitorNames);
+
+  return { reply, sources, research, response_mode: deepMode ? 'deep' : 'fast', market_grounded };
 }
